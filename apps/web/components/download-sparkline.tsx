@@ -7,26 +7,24 @@ interface SparklineProps {
   width?: number;
   /** Height of the SVG */
   height?: number;
-  /** Stroke color */
-  strokeColor?: string;
   /** Stroke width */
   strokeWidth?: number;
-  /** Optional fill color (gradient from line to bottom) */
-  fillColor?: string;
-  /** Additional className for the SVG */
+  /** Whether to show hatched fill */
+  showFill?: boolean;
+  /** Additional className for the SVG - use stroke-* and fill-* classes */
   className?: string;
 }
 
 /**
  * Pure SVG sparkline component - no external dependencies
+ * Use Tailwind classes for colors: stroke-subtle, fill-subtle/20, etc.
  */
 export function Sparkline({
   data,
   width = 120,
   height = 32,
-  strokeColor = "#666",
   strokeWidth = 1.5,
-  fillColor,
+  showFill = true,
   className = "",
 }: SparklineProps) {
   // Always render SVG with fixed dimensions to prevent layout shift
@@ -63,7 +61,7 @@ export function Sparkline({
   const polylinePoints = points.join(" ");
 
   // Generate fill path (area under the curve)
-  const fillPath = fillColor
+  const fillPath = showFill
     ? `M ${paddingX},${height - paddingY} L ${points.join(" L ")} L ${width - paddingX},${height - paddingY} Z`
     : null;
 
@@ -76,7 +74,7 @@ export function Sparkline({
       aria-hidden="true"
     >
       {/* Diagonal line pattern for fill */}
-      {fillColor && (
+      {showFill && (
         <defs>
           <pattern
             id="diagonalHatch"
@@ -85,7 +83,15 @@ export function Sparkline({
             height="3"
             patternTransform="rotate(45)"
           >
-            <line x1="0" y1="0" x2="0" y2="3" stroke="#fff" strokeWidth="0.5" opacity="0.5" />
+            <line
+              x1="0"
+              y1="0"
+              x2="0"
+              y2="3"
+              stroke="currentColor"
+              strokeWidth="0.5"
+              opacity="0.3"
+            />
           </pattern>
         </defs>
       )}
@@ -97,7 +103,7 @@ export function Sparkline({
       <polyline
         points={polylinePoints}
         fill="none"
-        stroke={strokeColor}
+        stroke="currentColor"
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"

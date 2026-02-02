@@ -1,8 +1,9 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { SearchTrigger } from "@/components/command-search";
+import { FavoriteButton } from "@/components/favorite-button";
+import { Footer } from "@/components/footer";
+import { Header } from "@/components/header";
 import { InstallTabs } from "@/components/install-tabs";
 import { TimeAgo } from "@/components/time-ago";
 import { WeeklyDownloads } from "@/components/weekly-downloads";
@@ -79,51 +80,26 @@ export default async function PackagePage({ params }: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <main className="min-h-screen bg-black text-white">
-        {/* Header */}
-        <header className="border-b border-[#333]">
-          <div className="container-page flex py-3 items-center gap-6">
-            <Link href="/" className="shrink-0 hover:opacity-80 transition-opacity">
-              <Image src="/logo.svg" alt="V1" width={32} height={22} />
-            </Link>
-            <SearchTrigger />
-            <div className="flex-1" />
-            <Link
-              href="/updates"
-              className="text-xs text-[#666] hover:text-white transition-colors font-mono relative"
-            >
-              ● LIVE
-              <span
-                className="absolute inset-0 pointer-events-none z-10"
-                style={{
-                  background:
-                    "repeating-linear-gradient(0deg, transparent 0px, transparent 1px, rgba(0,0,0,0.3) 1px, rgba(0,0,0,0.3) 2px)",
-                }}
-              />
-            </Link>
-            <Link
-              href="/mcp"
-              className="text-xs uppercase tracking-wider text-[#666] hover:text-white transition-colors"
-            >
-              MCP
-            </Link>
-          </div>
-        </header>
+      <main className="min-h-screen bg-background text-foreground flex flex-col">
+        <Header />
 
         {/* Package Title Bar */}
-        <div className="border-b border-[#333]">
+        <div className="border-b border-border">
           <div className="container-page py-6">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div>
-                <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">
-                  {pkg.name}
-                </h1>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl lg:text-3xl font-bold text-foreground tracking-tight">
+                    {pkg.name}
+                  </h1>
+                  <FavoriteButton packageName={pkg.name} />
+                </div>
                 {pkg.description && (
-                  <p className="mt-2 text-sm text-[#888] max-w-2xl">{pkg.description}</p>
+                  <p className="mt-2 text-sm text-muted max-w-2xl">{pkg.description}</p>
                 )}
               </div>
               <div className="text-right">
-                <div className="text-xs text-[#666] uppercase tracking-wider">version</div>
+                <div className="text-xs text-subtle uppercase tracking-wider">version</div>
                 <div className="text-lg font-bold tabular-nums">{pkg.version}</div>
               </div>
             </div>
@@ -132,10 +108,10 @@ export default async function PackagePage({ params }: PageProps) {
 
         {/* Deprecated Warning */}
         {pkg.deprecated && (
-          <div className="border-b border-[#333] bg-[#111]">
+          <div className="border-b border-border bg-surface">
             <div className="container-page py-3">
-              <span className="text-xs uppercase tracking-wider text-white">deprecated</span>
-              <span className="ml-3 text-sm text-[#888]">
+              <span className="text-xs uppercase tracking-wider text-foreground">deprecated</span>
+              <span className="ml-3 text-sm text-muted">
                 {pkg.deprecatedMessage || "This package is deprecated"}
               </span>
             </div>
@@ -144,12 +120,12 @@ export default async function PackagePage({ params }: PageProps) {
 
         {/* Install Scripts Warning */}
         {pkg.hasInstallScripts && (
-          <div className="border-b border-[#333] bg-[#111]">
+          <div className="border-b border-border bg-surface">
             <div className="container-page py-3">
               <span className="text-xs uppercase tracking-wider text-yellow-500">
                 install scripts
               </span>
-              <span className="ml-3 text-sm text-[#888]">
+              <span className="ml-3 text-sm text-muted">
                 This package runs scripts during installation (preinstall/install/postinstall)
               </span>
             </div>
@@ -157,9 +133,9 @@ export default async function PackagePage({ params }: PageProps) {
         )}
 
         {/* Stats Bar */}
-        <div className="border-b border-[#333]">
+        <div className="border-b border-border">
           <div className="container-page">
-            <div className="flex flex-wrap divide-x divide-[#333] -mx-4">
+            <div className="flex flex-wrap divide-x divide-border -mx-4">
               <StatCell label="license" value={pkg.license || "—"} />
               <StatCell label="deps" value={String(pkg.dependencyCount)} />
               {pkg.unpackedSize && <StatCell label="size" value={formatBytes(pkg.unpackedSize)} />}
@@ -186,7 +162,7 @@ export default async function PackagePage({ params }: PageProps) {
 
         {/* Replacement Warning */}
         {pkg.health?.replacement && pkg.health.replacement.type !== "none" && (
-          <div className="border-b border-[#333] bg-[#0a1a0a]">
+          <div className="border-b border-border bg-green-950/30 dark:bg-green-950/50">
             <div className="container-page py-3">
               <span className="text-xs uppercase tracking-wider text-green-400">
                 {pkg.health.replacement.type === "native"
@@ -194,7 +170,7 @@ export default async function PackagePage({ params }: PageProps) {
                   : "better alternative"}
               </span>
               {pkg.health.replacement.useInstead && (
-                <span className="ml-3 text-sm text-[#888]">
+                <span className="ml-3 text-sm text-muted">
                   Consider using{" "}
                   <Link
                     href={`/${encodeURIComponent(pkg.health.replacement.useInstead)}`}
@@ -213,16 +189,16 @@ export default async function PackagePage({ params }: PageProps) {
         <div className="container-page">
           <div className="flex flex-col lg:flex-row">
             {/* Left: Main Content */}
-            <div className="flex-1 min-w-0 lg:border-r border-[#333]">
+            <div className="flex-1 min-w-0 lg:border-r border-border">
               {/* Install Section */}
-              <section className="border-b border-[#333] py-6 lg:pr-8">
+              <section className="border-b border-border py-6 lg:pr-8">
                 <InstallTabs packageName={pkg.name} hasTypes={pkg.hasTypes} />
               </section>
 
               {/* README Section */}
               {pkg.readmeHtml && (
-                <section className="border-b border-[#333] py-6 lg:pr-8">
-                  <h2 className="text-xs uppercase tracking-widest text-[#666] mb-4">readme</h2>
+                <section className="border-b border-border py-6 lg:pr-8">
+                  <h2 className="text-xs uppercase tracking-widest text-subtle mb-4">readme</h2>
                   <div
                     className="readme max-w-none"
                     dangerouslySetInnerHTML={{ __html: pkg.readmeHtml }}
@@ -233,7 +209,7 @@ export default async function PackagePage({ params }: PageProps) {
               {/* Dependencies Section */}
               {deps.length > 0 && (
                 <section className="py-6 lg:pr-8">
-                  <h2 className="text-xs uppercase tracking-widest text-[#666] mb-4">
+                  <h2 className="text-xs uppercase tracking-widest text-subtle mb-4">
                     dependencies [{deps.length}]
                   </h2>
                   <div className="flex flex-wrap gap-1">
@@ -241,13 +217,13 @@ export default async function PackagePage({ params }: PageProps) {
                       <Link
                         key={dep}
                         href={`/${encodeURIComponent(dep)}`}
-                        className="text-xs px-2 py-1 border border-[#333] text-[#888] hover:text-white hover:border-white transition-colors"
+                        className="text-xs px-2 py-1 border border-border text-muted hover:text-foreground hover:border-foreground transition-colors"
                       >
                         {dep}
                       </Link>
                     ))}
                     {deps.length > 50 && (
-                      <span className="text-xs px-2 py-1 text-[#444]">+{deps.length - 50}</span>
+                      <span className="text-xs px-2 py-1 text-faint">+{deps.length - 50}</span>
                     )}
                   </div>
                 </section>
@@ -257,17 +233,19 @@ export default async function PackagePage({ params }: PageProps) {
             {/* Right: Sidebar */}
             <aside className="w-full lg:w-64 shrink-0 lg:pl-6">
               {/* Downloads with Sparkline */}
-              <div className="border-b border-[#333] py-4">
+              <div className="border-b border-border py-4">
                 <WeeklyDownloads packageName={pkg.name} initialWeeklyDownloads={pkg.downloads} />
               </div>
 
               {/* Version */}
-              <div className="border-b border-[#333] py-4">
-                <h3 className="text-xs uppercase tracking-widest text-[#666] mb-2">latest</h3>
+              <div className="border-b border-border py-4">
+                <h3 className="text-xs uppercase tracking-widest text-subtle mb-2">latest</h3>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-white font-bold tabular-nums">{pkg.version}</span>
+                  <span className="text-sm text-foreground font-bold tabular-nums">
+                    {pkg.version}
+                  </span>
                   {pkg.updated > 0 && (
-                    <span className="text-xs text-[#666]">
+                    <span className="text-xs text-subtle">
                       <TimeAgo timestamp={pkg.updated} />
                     </span>
                   )}
@@ -275,11 +253,13 @@ export default async function PackagePage({ params }: PageProps) {
               </div>
 
               {/* Module */}
-              <div className="border-b border-[#333] py-4">
-                <h3 className="text-xs uppercase tracking-widest text-[#666] mb-3">module</h3>
+              <div className="border-b border-border py-4">
+                <h3 className="text-xs uppercase tracking-widest text-subtle mb-3">module</h3>
                 <div className="flex flex-wrap gap-2">
                   {pkg.hasTypes && (
-                    <span className="text-xs border border-white text-white px-2 py-0.5">TS</span>
+                    <span className="text-xs border border-foreground text-foreground px-2 py-0.5">
+                      TS
+                    </span>
                   )}
                   {!pkg.hasTypes && pkg.typesPackage && (
                     <Link
@@ -290,25 +270,21 @@ export default async function PackagePage({ params }: PageProps) {
                     </Link>
                   )}
                   {pkg.isESM && (
-                    <span className="text-xs border border-[#666] text-[#888] px-2 py-0.5">
-                      ESM
-                    </span>
+                    <span className="text-xs border border-subtle text-muted px-2 py-0.5">ESM</span>
                   )}
                   {pkg.isCJS && (
-                    <span className="text-xs border border-[#666] text-[#888] px-2 py-0.5">
-                      CJS
-                    </span>
+                    <span className="text-xs border border-subtle text-muted px-2 py-0.5">CJS</span>
                   )}
                   {!pkg.hasTypes && !pkg.typesPackage && !pkg.isESM && !pkg.isCJS && (
-                    <span className="text-xs text-[#444]">—</span>
+                    <span className="text-xs text-faint">—</span>
                   )}
                 </div>
               </div>
 
               {/* Health Score */}
               {pkg.health && (
-                <div className="border-b border-[#333] py-4">
-                  <h3 className="text-xs uppercase tracking-widest text-[#666] mb-3">
+                <div className="border-b border-border py-4">
+                  <h3 className="text-xs uppercase tracking-widest text-subtle mb-3">
                     health score
                   </h3>
                   <div className="flex items-center gap-3">
@@ -318,16 +294,16 @@ export default async function PackagePage({ params }: PageProps) {
                     >
                       {pkg.health.health.grade}
                     </span>
-                    <span className="text-sm text-[#888]">{pkg.health.health.score}/100</span>
+                    <span className="text-sm text-muted">{pkg.health.health.score}/100</span>
                   </div>
-                  <div className="text-xs text-[#666] mt-1">{pkg.health.health.status}</div>
+                  <div className="text-xs text-subtle mt-1">{pkg.health.health.status}</div>
                 </div>
               )}
 
               {/* Alternatives */}
               {pkg.health?.alternatives && pkg.health.alternatives.length > 0 && (
-                <div className="border-b border-[#333] py-4">
-                  <h3 className="text-xs uppercase tracking-widest text-[#666] mb-3">
+                <div className="border-b border-border py-4">
+                  <h3 className="text-xs uppercase tracking-widest text-subtle mb-3">
                     alternatives
                   </h3>
                   <div className="space-y-2">
@@ -335,10 +311,10 @@ export default async function PackagePage({ params }: PageProps) {
                       <Link
                         key={alt.name}
                         href={`/${encodeURIComponent(alt.name)}`}
-                        className="block text-sm text-[#888] hover:text-white transition-colors"
+                        className="block text-sm text-muted hover:text-foreground transition-colors"
                       >
                         {alt.name}
-                        <span className="text-xs text-[#666] ml-2">
+                        <span className="text-xs text-subtle ml-2">
                           {formatNumber(alt.downloads)}/wk
                         </span>
                       </Link>
@@ -349,8 +325,8 @@ export default async function PackagePage({ params }: PageProps) {
 
               {/* Maintainers */}
               {pkg.maintainers && pkg.maintainers.length > 0 && (
-                <div className="border-b border-[#333] py-4">
-                  <h3 className="text-xs uppercase tracking-widest text-[#666] mb-3">
+                <div className="border-b border-border py-4">
+                  <h3 className="text-xs uppercase tracking-widest text-subtle mb-3">
                     maintainers
                   </h3>
                   <div className="space-y-1">
@@ -359,7 +335,7 @@ export default async function PackagePage({ params }: PageProps) {
                         key={m}
                         href={`https://www.npmjs.com/~${m}`}
                         target="_blank"
-                        className="block text-sm text-[#888] hover:text-white transition-colors"
+                        className="block text-sm text-muted hover:text-foreground transition-colors"
                       >
                         ~{m}
                       </Link>
@@ -370,9 +346,9 @@ export default async function PackagePage({ params }: PageProps) {
 
               {/* Keywords */}
               {pkg.keywords && pkg.keywords.length > 0 && (
-                <div className="border-b border-[#333] py-4">
-                  <h3 className="text-xs uppercase tracking-widest text-[#666] mb-3">keywords</h3>
-                  <div className="text-sm text-[#888] space-y-0.5">
+                <div className="border-b border-border py-4">
+                  <h3 className="text-xs uppercase tracking-widest text-subtle mb-3">keywords</h3>
+                  <div className="text-sm text-muted space-y-0.5">
                     {pkg.keywords.slice(0, 8).map((k) => (
                       <div key={k}>— {k}</div>
                     ))}
@@ -382,20 +358,20 @@ export default async function PackagePage({ params }: PageProps) {
 
               {/* Compatibility */}
               {pkg.nodeVersion && (
-                <div className="border-b border-[#333] py-4">
-                  <h3 className="text-xs uppercase tracking-widest text-[#666] mb-2">node</h3>
-                  <div className="text-sm text-[#888]">{pkg.nodeVersion}</div>
+                <div className="border-b border-border py-4">
+                  <h3 className="text-xs uppercase tracking-widest text-subtle mb-2">node</h3>
+                  <div className="text-sm text-muted">{pkg.nodeVersion}</div>
                 </div>
               )}
 
               {/* Links */}
-              <div className="border-b border-[#333] py-4">
-                <h3 className="text-xs uppercase tracking-widest text-[#666] mb-3">links</h3>
+              <div className="border-b border-border py-4">
+                <h3 className="text-xs uppercase tracking-widest text-subtle mb-3">links</h3>
                 <div className="space-y-1 text-sm">
                   <Link
                     href={`https://www.npmjs.com/package/${pkg.name}`}
                     target="_blank"
-                    className="block text-[#888] hover:text-white transition-colors"
+                    className="block text-muted hover:text-foreground transition-colors"
                   >
                     npm ↗
                   </Link>
@@ -403,7 +379,7 @@ export default async function PackagePage({ params }: PageProps) {
                     <Link
                       href={pkg.repository}
                       target="_blank"
-                      className="block text-[#888] hover:text-white transition-colors"
+                      className="block text-muted hover:text-foreground transition-colors"
                     >
                       {pkg.repository.includes("github") ? "github" : "repository"} ↗
                     </Link>
@@ -412,7 +388,7 @@ export default async function PackagePage({ params }: PageProps) {
                     <Link
                       href={pkg.homepage}
                       target="_blank"
-                      className="block text-[#888] hover:text-white transition-colors"
+                      className="block text-muted hover:text-foreground transition-colors"
                     >
                       homepage ↗
                     </Link>
@@ -433,7 +409,7 @@ export default async function PackagePage({ params }: PageProps) {
               <div className="py-4">
                 <Link
                   href="cursor://anysphere.cursor-deeplink/mcp/install?name=v1&config=eyJ1cmwiOiJodHRwczovL2FwaS52MS5ydW4vbWNwIn0="
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-[#333] text-xs text-[#888] hover:text-white hover:border-[#555] transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-border text-xs text-muted hover:text-foreground hover:border-subtle transition-colors"
                 >
                   <svg
                     width="12"
@@ -451,35 +427,7 @@ export default async function PackagePage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* Footer */}
-        <footer className="border-t border-[#333] mt-12">
-          <div className="container-page py-4 flex items-center justify-between text-xs text-[#666]">
-            <Link href="/" className="hover:text-white transition-colors">
-              v1.run
-            </Link>
-            <div className="flex items-center gap-4">
-              <Link
-                href="/updates"
-                className="hover:text-white transition-colors font-mono relative"
-              >
-                ● LIVE
-                <span
-                  className="absolute inset-0 pointer-events-none z-10"
-                  style={{
-                    background:
-                      "repeating-linear-gradient(0deg, transparent 0px, transparent 1px, rgba(0,0,0,0.3) 1px, rgba(0,0,0,0.3) 2px)",
-                  }}
-                />
-              </Link>
-              <Link
-                href="/mcp"
-                className="hover:text-white transition-colors uppercase tracking-wider"
-              >
-                MCP
-              </Link>
-            </div>
-          </div>
-        </footer>
+        <Footer />
       </main>
     </>
   );
@@ -488,8 +436,8 @@ export default async function PackagePage({ params }: PageProps) {
 function StatCell({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex-1 min-w-[100px] px-4 py-3">
-      <div className="text-[10px] uppercase tracking-widest text-[#666]">{label}</div>
-      <div className="text-sm text-white font-medium tabular-nums">{value}</div>
+      <div className="text-[10px] uppercase tracking-widest text-subtle">{label}</div>
+      <div className="text-sm text-foreground font-medium tabular-nums">{value}</div>
     </div>
   );
 }
@@ -497,9 +445,9 @@ function StatCell({ label, value }: { label: string; value: React.ReactNode }) {
 function VulnStatCellFromHealth({ vulns }: { vulns: number }) {
   return (
     <div className="flex-1 min-w-[100px] px-4 py-3">
-      <div className="text-[10px] uppercase tracking-widest text-[#666]">vulns</div>
+      <div className="text-[10px] uppercase tracking-widest text-subtle">vulns</div>
       <div
-        className={`text-sm font-medium tabular-nums ${vulns > 0 ? "text-red-400" : "text-white"}`}
+        className={`text-sm font-medium tabular-nums ${vulns > 0 ? "text-red-400" : "text-foreground"}`}
       >
         {vulns}
       </div>
@@ -510,7 +458,7 @@ function VulnStatCellFromHealth({ vulns }: { vulns: number }) {
 function HealthScoreCell({ score, grade }: { score: number; grade: string }) {
   return (
     <div className="flex-1 min-w-[100px] px-4 py-3">
-      <div className="text-[10px] uppercase tracking-widest text-[#666]">health</div>
+      <div className="text-[10px] uppercase tracking-widest text-subtle">health</div>
       <div className="text-sm font-medium" style={{ color: getGradeColor(grade) }}>
         {grade} ({score})
       </div>
@@ -554,8 +502,8 @@ async function VulnStatCell({ packageName, version }: { packageName: string; ver
 
     return (
       <div className="flex-1 min-w-[100px] px-4 py-3">
-        <div className="text-[10px] uppercase tracking-widest text-[#666]">vulns</div>
-        <div className="text-sm font-medium tabular-nums text-white">{count}</div>
+        <div className="text-[10px] uppercase tracking-widest text-subtle">vulns</div>
+        <div className="text-sm font-medium tabular-nums text-foreground">{count}</div>
       </div>
     );
   } catch {

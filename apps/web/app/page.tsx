@@ -4,8 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { Spinner } from "@/components/ui/spinner";
 import { useSearch } from "@/lib/hooks";
 import { formatDownloads } from "@/lib/api";
+import { UserProfile } from "@/components/user-profile";
 
 export default function Home() {
   const [query, setQuery] = useState("");
@@ -148,18 +150,17 @@ export default function Home() {
   const hasSearched = isFetched && debouncedQuery.length > 0;
 
   return (
-    <main className="h-screen bg-black font-mono flex flex-col overflow-hidden relative">
-      {/* Scanlines overlay */}
-      <div
-        className="absolute inset-0 pointer-events-none z-10 opacity-[0.012]"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(255,255,255,0.02) 1px, rgba(255,255,255,0.02) 2px)",
-        }}
-      />
+    <div className="min-h-screen h-screen bg-background text-foreground font-mono relative overflow-hidden">
+      {/* Screen flicker */}
+      <div className="screen-flicker" />
+
+      {/* User profile - top right */}
+      <div className="absolute top-4 right-4 z-20">
+        <UserProfile />
+      </div>
 
       {/* Content */}
-      <div className="relative z-5 h-full flex flex-col p-6 lg:p-10">
+      <main className="relative z-10 h-screen flex flex-col">
         {/* Main content - centered */}
         <div className="flex-1 flex flex-col items-center justify-center -mt-8">
           {/* Logo */}
@@ -168,27 +169,23 @@ export default function Home() {
             alt="V1"
             width={129}
             height={91}
-            className="w-20 sm:w-24 lg:w-28 h-auto mb-10 select-none"
+            className="w-20 sm:w-24 lg:w-28 h-auto mb-10 select-none brightness-0 dark:brightness-100"
             priority
           />
 
           {/* Tagline */}
           <div className="text-center mb-8">
-            <p className="text-xl text-neutral-200">npm for agents</p>
-            <p className="text-sm text-neutral-500 mt-2">
-              MCP-first. Security signals. Sub-100ms globally.
+            <p className="text-xl text-foreground">npm for agents</p>
+            <p className="text-sm text-muted mt-2">
+              MCP-first. Security signals. &lt;100ms globally.
             </p>
           </div>
 
           {/* Command prompt with instant search */}
           <div className="w-full max-w-xl relative" ref={containerRef}>
             <form onSubmit={handleSubmit}>
-              <div
-                className={`flex items-center text-sm border bg-neutral-950 px-4 py-3 transition-colors ${
-                  isOpen ? "border-neutral-700" : "border-neutral-800"
-                }`}
-              >
-                <span className="text-neutral-600">$</span>
+              <div className="flex items-center text-sm border border-border px-4 py-3">
+                <span className="text-muted">$</span>
                 <input
                   ref={inputRef}
                   type="text"
@@ -196,17 +193,17 @@ export default function Home() {
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
                   onFocus={() => query.trim() && setIsOpen(true)}
-                  className="flex-1 bg-transparent text-white ml-2 outline-none placeholder-neutral-700"
+                  className="flex-1 bg-transparent text-foreground ml-2 outline-none placeholder-subtle"
                   placeholder="search packages..."
                   spellCheck={false}
                   autoComplete="off"
                   autoCapitalize="off"
                 />
                 {isLoading ? (
-                  <span className="text-neutral-600 text-xs">searching...</span>
+                  <Spinner />
                 ) : (
                   <span
-                    className={`w-2 h-5 bg-white transition-opacity ${showCursor && !isOpen ? "opacity-100" : "opacity-0"}`}
+                    className={`w-2 h-5 bg-foreground transition-opacity ${showCursor && !isOpen ? "opacity-100" : "opacity-0"}`}
                   />
                 )}
               </div>
@@ -216,7 +213,7 @@ export default function Home() {
             {isOpen && query.trim() && (
               <div
                 ref={resultsRef}
-                className="absolute top-full left-0 right-0 mt-1 border border-neutral-800 bg-neutral-950 z-20 max-h-[280px] overflow-y-auto"
+                className="absolute top-full left-0 right-0 mt-1 border border-border bg-background/95 z-20 max-h-[280px] overflow-y-auto backdrop-blur-sm"
               >
                 {results.length > 0 ? (
                   results.map((result, index) => (
@@ -226,8 +223,8 @@ export default function Home() {
                       prefetch={true}
                       className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
                         index === selectedIndex
-                          ? "bg-neutral-800 text-white"
-                          : "text-neutral-400 hover:bg-neutral-900"
+                          ? "bg-surface text-foreground"
+                          : "text-muted hover:bg-surface/50"
                       }`}
                       onMouseEnter={() => {
                         setSelectedIndex(index);
@@ -238,36 +235,36 @@ export default function Home() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span
-                            className={index === selectedIndex ? "text-white" : "text-neutral-200"}
+                            className={
+                              index === selectedIndex ? "text-foreground" : "text-foreground/80"
+                            }
                           >
                             {result.name}
                           </span>
-                          <span className="text-neutral-600 text-xs">v{result.version}</span>
+                          <span className="text-subtle text-xs">v{result.version}</span>
                           {result.hasTypes && (
-                            <span className="text-[10px] text-blue-400 border border-blue-400/30 px-1">
+                            <span className="text-[10px] text-blue-500 dark:text-blue-400 border border-blue-500/30 dark:border-blue-400/30 px-1">
                               TS
                             </span>
                           )}
                         </div>
                         {result.description && (
-                          <p className="text-neutral-500 text-xs truncate mt-0.5">
-                            {result.description}
-                          </p>
+                          <p className="text-muted text-xs truncate mt-0.5">{result.description}</p>
                         )}
                       </div>
-                      <div className="text-neutral-600 text-xs whitespace-nowrap">
+                      <div className="text-subtle text-xs whitespace-nowrap">
                         {formatDownloads(result.downloads)}/wk
                       </div>
                     </Link>
                   ))
                 ) : hasSearched && !isLoading ? (
                   <div className="px-4 py-6 text-center">
-                    <p className="text-neutral-500 text-sm">No packages found for "{query}"</p>
-                    <p className="text-neutral-600 text-xs mt-1">Press Enter to search on npm</p>
+                    <p className="text-muted text-sm">No packages found for "{query}"</p>
+                    <p className="text-subtle text-xs mt-1">Press Enter to search on npm</p>
                   </div>
                 ) : (
                   <div className="px-4 py-4 text-center">
-                    <p className="text-neutral-600 text-sm">Searching...</p>
+                    <p className="text-subtle text-sm">Searching...</p>
                   </div>
                 )}
               </div>
@@ -276,30 +273,41 @@ export default function Home() {
 
           {/* Featured packages */}
           <div className="text-xs mt-6">
-            {[
-              "next",
-              "react",
-              "zod",
-              "drizzle-orm",
-              "hono",
-              "tailwindcss",
-              "typescript",
-              "vite",
-            ].map((pkg, i, arr) => (
-              <span key={pkg}>
-                <Link
-                  href={`/${pkg}`}
-                  prefetch={true}
-                  className="text-neutral-700 hover:text-white transition-colors"
-                >
-                  {pkg}
-                </Link>
-                {i < arr.length - 1 && <span className="text-neutral-700"> · </span>}
-              </span>
-            ))}
+            {["next", "react", "drizzle-orm", "hono", "tailwindcss", "typescript", "vite"].map(
+              (pkg, i, arr) => (
+                <span key={pkg}>
+                  <Link
+                    href={`/${pkg}`}
+                    prefetch={true}
+                    className="text-subtle hover:text-foreground transition-colors"
+                  >
+                    {pkg}
+                  </Link>
+                  {i < arr.length - 1 && <span className="text-faint"> · </span>}
+                </span>
+              ),
+            )}
           </div>
         </div>
-      </div>
-    </main>
+      </main>
+
+      <style jsx global>{`
+        /* Subtle flicker effect */
+        .screen-flicker {
+          position: fixed;
+          inset: 0;
+          pointer-events: none;
+          z-index: 99;
+          background: transparent;
+          animation: flicker 0.15s infinite;
+        }
+
+        @keyframes flicker {
+          0% { opacity: 0.97; }
+          50% { opacity: 1; }
+          100% { opacity: 0.98; }
+        }
+      `}</style>
+    </div>
   );
 }

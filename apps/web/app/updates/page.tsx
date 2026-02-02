@@ -97,9 +97,6 @@ export default function UpdatesPage() {
       {/* Screen flicker */}
       <div className="screen-flicker" />
 
-      {/* Vignette */}
-      <div className="vignette" />
-
       {/* Content */}
       <div className="crt-content">
         {/* Header */}
@@ -169,7 +166,7 @@ export default function UpdatesPage() {
       <style jsx global>{`
         .crt-screen {
           min-height: 100vh;
-          background: #0a0a0a;
+          background: #050505;
           color: #ffffff;
           font-family: var(--font-mono), 'Courier New', monospace;
           position: relative;
@@ -211,20 +208,6 @@ export default function UpdatesPage() {
           0% { opacity: 0.97; }
           50% { opacity: 1; }
           100% { opacity: 0.98; }
-        }
-
-        /* Vignette - darker edges */
-        .vignette {
-          position: fixed;
-          inset: 0;
-          pointer-events: none;
-          z-index: 98;
-          background: radial-gradient(
-            ellipse at center,
-            transparent 0%,
-            transparent 50%,
-            rgba(0, 0, 0, 0.6) 100%
-          );
         }
 
         /* Content styling */

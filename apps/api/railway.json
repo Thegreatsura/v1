@@ -6,6 +6,7 @@
     "watchPatterns": ["apps/api/**", "packages/**", "package.json", "bun.lock"]
   },
   "deploy": {
+    "preDeployCommand": "bun run db:migrate",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 30,
     "restartPolicyType": "ON_FAILURE",

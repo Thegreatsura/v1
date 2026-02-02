@@ -42,6 +42,10 @@ import {
   findAlternatives,
   getPackageVersion,
 } from "./tools/index";
+import { auth } from "./lib/auth";
+import { db } from "./lib/db";
+import { favorite, user as userTable } from "./lib/auth-schema";
+import { eq, and } from "drizzle-orm";
 
 const app = new Hono();
 const PORT = process.env.PORT || 3001;
@@ -75,7 +79,7 @@ app.use(
       // Allow no origin (same-origin requests, curl, etc.)
       return origin || "*";
     },
-    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type"],
     credentials: true,
   }),
@@ -88,6 +92,128 @@ app.get("/health", (c) => {
     timestamp: new Date().toISOString(),
     service: "v1-api",
   });
+});
+
+// Better Auth routes
+if (auth) {
+  const authHandler = auth.handler;
+  app.on(["POST", "GET"], "/api/auth/*", (c) => {
+    return authHandler(c.req.raw);
+  });
+  console.log("[Auth] Better Auth routes mounted at /api/auth/*");
+} else {
+  console.log("[Auth] Skipped - DATABASE_URL not configured");
+}
+
+// Helper to get current user from session
+async function getCurrentUser(c: { req: { raw: Request } }) {
+  if (!auth) return null;
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  return session?.user || null;
+}
+
+// Favorites API endpoints
+app.get("/api/favorites", async (c) => {
+  const user = await getCurrentUser(c);
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+  if (!db) {
+    return c.json({ error: "Database not configured" }, 500);
+  }
+  try {
+    const favorites = await db
+      .select()
+      .from(favorite)
+      .where(eq(favorite.userId, user.id))
+      .orderBy(favorite.createdAt);
+    return c.json({ favorites: favorites.map((f) => f.packageName) });
+  } catch (error) {
+    console.error("[Favorites] Error fetching:", error);
+    return c.json({ error: "Failed to fetch favorites" }, 500);
+  }
+});
+
+app.post("/api/favorites/:name", async (c) => {
+  const user = await getCurrentUser(c);
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+  if (!db) {
+    return c.json({ error: "Database not configured" }, 500);
+  }
+  const packageName = decodeURIComponent(c.req.param("name"));
+  try {
+    await db.insert(favorite).values({
+      id: crypto.randomUUID(),
+      userId: user.id,
+      packageName,
+    }).onConflictDoNothing();
+    return c.json({ success: true, packageName });
+  } catch (error) {
+    console.error("[Favorites] Error adding:", error);
+    return c.json({ error: "Failed to add favorite" }, 500);
+  }
+});
+
+app.delete("/api/favorites/:name", async (c) => {
+  const user = await getCurrentUser(c);
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+  if (!db) {
+    return c.json({ error: "Database not configured" }, 500);
+  }
+  const packageName = decodeURIComponent(c.req.param("name"));
+  try {
+    await db
+      .delete(favorite)
+      .where(and(eq(favorite.userId, user.id), eq(favorite.packageName, packageName)));
+    return c.json({ success: true, packageName });
+  } catch (error) {
+    console.error("[Favorites] Error removing:", error);
+    return c.json({ error: "Failed to remove favorite" }, 500);
+  }
+});
+
+app.get("/api/favorites/check/:name", async (c) => {
+  const user = await getCurrentUser(c);
+  if (!user) {
+    return c.json({ isFavorite: false });
+  }
+  if (!db) {
+    return c.json({ isFavorite: false });
+  }
+  const packageName = decodeURIComponent(c.req.param("name"));
+  try {
+    const result = await db
+      .select()
+      .from(favorite)
+      .where(and(eq(favorite.userId, user.id), eq(favorite.packageName, packageName)))
+      .limit(1);
+    return c.json({ isFavorite: result.length > 0 });
+  } catch (error) {
+    return c.json({ isFavorite: false });
+  }
+});
+
+// Delete user account
+app.delete("/api/account", async (c) => {
+  const currentUser = await getCurrentUser(c);
+  if (!currentUser) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+  if (!db) {
+    return c.json({ error: "Database not configured" }, 500);
+  }
+  try {
+    // Delete user - cascades to sessions, accounts, and favorites
+    await db.delete(userTable).where(eq(userTable.id, currentUser.id));
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("[Account] Error deleting:", error);
+    return c.json({ error: "Failed to delete account" }, 500);
+  }
 });
 
 // Create MCP server with tools using the new registerTool API
@@ -869,10 +995,16 @@ app.get("/api/updates/stream", async (c) => {
   return new Response(stream, {
     headers: {
       "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache, no-transform",
+      "Cache-Control": "no-cache, no-store, no-transform, must-revalidate",
       Connection: "keep-alive",
       "X-Accel-Buffering": "no",
+      // Cloudflare-specific: disable buffering
+      "CF-Cache-Status": "DYNAMIC",
+      // CORS
       "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "Cache-Control",
+      // Prevent chunked encoding issues
+      "Transfer-Encoding": "chunked",
     },
   });
 });

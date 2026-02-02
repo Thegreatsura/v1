@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Dark mode uses class strategy (for next-themes) */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Tailwind v4 Theme Configuration */
 @theme {
   /* Zero radius - sharp corners */
@@ -14,17 +17,53 @@
   --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
   --font-sans: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
 
-  /* Colors - Pure monochrome */
-  --color-background: #000000;
-  --color-foreground: #ffffff;
-  --color-border: #333333;
-  --color-muted: #888888;
-  --color-subtle: #666666;
-  --color-faint: #444444;
-  --color-surface: #111111;
-
   /* Max width */
   --container-max: 1200px;
+
+  /* Theme colors - using CSS variables that change with theme */
+  --color-background: var(--bg);
+  --color-foreground: var(--fg);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-faint: var(--faint);
+  --color-surface: var(--surface);
+  --color-scanline: var(--scanline);
+}
+
+/* Dark theme (default) */
+:root,
+html.dark {
+  --bg: #050505;
+  --fg: #ffffff;
+  --border: #1a1a1a;
+  --muted: #888888;
+  --subtle: #666666;
+  --faint: #333333;
+  --surface: #0a0a0a;
+  --scanline: rgba(255, 255, 255, 0.06);
+  /* shadcn compatibility */
+  --popover: #0a0a0a;
+  --popover-foreground: #ffffff;
+  --accent: #1a1a1a;
+  --accent-foreground: #ffffff;
+}
+
+/* Light theme - Old school beige */
+html.light {
+  --bg: #f5f0e6;
+  --fg: #1a1a1a;
+  --border: #d4cfc4;
+  --muted: #5c5c5c;
+  --subtle: #7a7a7a;
+  --faint: #c4bfb4;
+  --surface: #ebe6dc;
+  --scanline: rgba(0, 0, 0, 0.04);
+  /* shadcn compatibility */
+  --popover: #ebe6dc;
+  --popover-foreground: #1a1a1a;
+  --accent: #d4cfc4;
+  --accent-foreground: #1a1a1a;
 }
 
 /* Base styles */
@@ -44,28 +83,52 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Selection */
-  ::selection {
+  /* Selection - dark mode */
+  html.dark ::selection {
     background: #ffffff;
     color: #000000;
   }
 
-  /* Scrollbar */
-  ::-webkit-scrollbar {
+  /* Selection - light mode */
+  html.light ::selection {
+    background: #1a1a1a;
+    color: #f5f0e6;
+  }
+
+  /* Scrollbar - dark mode */
+  html.dark ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
 
-  ::-webkit-scrollbar-track {
+  html.dark ::-webkit-scrollbar-track {
     background: #000000;
   }
 
-  ::-webkit-scrollbar-thumb {
+  html.dark ::-webkit-scrollbar-thumb {
     background: #333333;
   }
 
-  ::-webkit-scrollbar-thumb:hover {
+  html.dark ::-webkit-scrollbar-thumb:hover {
     background: #666666;
+  }
+
+  /* Scrollbar - light mode */
+  html.light ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  html.light ::-webkit-scrollbar-track {
+    background: #ebe6dc;
+  }
+
+  html.light ::-webkit-scrollbar-thumb {
+    background: #c4bfb4;
+  }
+
+  html.light ::-webkit-scrollbar-thumb:hover {
+    background: #a09a8f;
   }
 }
 
@@ -124,7 +187,7 @@
   & h5,
   & h6 {
     font-weight: 700;
-    color: #ffffff;
+    color: var(--color-foreground);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     border-bottom: 1px solid var(--color-border);
@@ -165,7 +228,7 @@
 
   /* Links */
   & a {
-    color: #ffffff;
+    color: var(--color-foreground);
     text-decoration: underline;
     text-decoration-color: var(--color-faint);
     text-underline-offset: 2px;
@@ -173,7 +236,7 @@
   }
 
   & a:hover {
-    text-decoration-color: #ffffff;
+    text-decoration-color: var(--color-foreground);
   }
 
   /* Lists */
@@ -232,7 +295,7 @@
   /* Inline code */
   & code:not(pre code) {
     background: var(--color-surface);
-    color: #ffffff;
+    color: var(--color-foreground);
     padding: 0.125rem 0.375rem;
     font-size: 0.75rem;
     border: 1px solid var(--color-border);
@@ -245,7 +308,7 @@
     overflow-x: auto;
     font-size: 0.75rem;
     border: 1px solid var(--color-border);
-    background: #000000;
+    background: var(--color-surface);
   }
 
   & pre code {
@@ -273,7 +336,7 @@
   & th {
     background: var(--color-surface);
     font-weight: 700;
-    color: #ffffff;
+    color: var(--color-foreground);
     text-transform: uppercase;
     font-size: 10px;
     letter-spacing: 0.1em;
@@ -313,19 +376,19 @@
 
   /* Strong */
   & strong {
-    color: #ffffff;
+    color: var(--color-foreground);
     font-weight: 700;
   }
 
   /* Emphasis */
   & em {
-    color: #aaaaaa;
+    color: var(--color-muted);
   }
 
   /* Keyboard */
   & kbd {
     background: var(--color-surface);
-    color: #ffffff;
+    color: var(--color-foreground);
     padding: 0.125rem 0.375rem;
     font-size: 0.75rem;
     border: 1px solid var(--color-border);
@@ -340,7 +403,7 @@
   & summary {
     cursor: pointer;
     padding: 0.5rem 0.75rem;
-    color: #ffffff;
+    color: var(--color-foreground);
     background: var(--color-surface);
     font-weight: 700;
     font-size: 0.75rem;
@@ -361,7 +424,7 @@
 .shiki {
   overflow-x: auto;
   border: 1px solid var(--color-border);
-  background: #000000 !important;
+  background: var(--color-surface) !important;
 }
 
 .shiki code {

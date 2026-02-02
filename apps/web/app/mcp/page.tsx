@@ -1,7 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { SearchTrigger } from "@/components/command-search";
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
 
 export const metadata: Metadata = {
   title: "MCP - v1.run",
@@ -14,57 +14,48 @@ const CURSOR_DEEPLINK =
 
 export default function MCPPage() {
   return (
-    <main className="min-h-screen bg-black text-white font-mono">
-      {/* Header */}
-      <header className="border-b border-[#333]">
-        <div className="container-page flex py-3 items-center gap-6">
-          <Link href="/" className="shrink-0 hover:opacity-80 transition-opacity">
-            <Image src="/logo.svg" alt="V1" width={32} height={22} />
-          </Link>
-          <SearchTrigger />
-          <div className="flex-1" />
-        </div>
-      </header>
+    <main className="min-h-screen bg-background text-foreground font-mono flex flex-col">
+      <Header />
 
       {/* Content */}
-      <div className="container-page py-12">
+      <div className="container-page py-12 flex-1">
         <h1 className="text-2xl font-bold mb-4">Model Context Protocol</h1>
-        <p className="text-[#888] mb-8">
+        <p className="text-muted mb-8">
           Give your AI agent fast, accurate npm data — latest versions, security vulnerabilities,
           and package health.
         </p>
 
         {/* Why */}
         <section className="mb-12">
-          <h2 className="text-xs uppercase tracking-widest text-[#666] mb-4">Why</h2>
-          <div className="space-y-3 text-sm text-[#888]">
+          <h2 className="text-xs uppercase tracking-widest text-subtle mb-4">Why</h2>
+          <div className="space-y-3 text-sm text-muted">
             <p>
-              <span className="text-white">Fast</span> — Sub-100ms responses globally
+              <span className="text-foreground">Fast</span> — &lt;100ms globally
             </p>
             <p>
-              <span className="text-white">Accurate</span> — Real-time version data, no hallucinated
-              packages
+              <span className="text-foreground">Accurate</span> — Real-time version data, no
+              hallucinated packages
             </p>
             <p>
-              <span className="text-white">Secure</span> — Vulnerability data from OSV for every
-              package
+              <span className="text-foreground">Secure</span> — Vulnerability data from OSV for
+              every package
             </p>
             <p>
-              <span className="text-white">Current</span> — Synced with npm registry, always up to
-              date
+              <span className="text-foreground">Current</span> — Synced with npm registry, always up
+              to date
             </p>
           </div>
         </section>
 
         {/* Installation */}
         <section className="mb-12">
-          <h2 className="text-xs uppercase tracking-widest text-[#666] mb-4">Configuration</h2>
+          <h2 className="text-xs uppercase tracking-widest text-subtle mb-4">Configuration</h2>
 
           {/* Cursor deeplink */}
           <div className="mb-6">
             <Link
               href={CURSOR_DEEPLINK}
-              className="inline-flex items-center gap-2.5 px-4 py-2.5 bg-black border border-[#333] rounded-lg text-sm font-medium text-white hover:bg-[#111] hover:border-[#444] transition-colors"
+              className="inline-flex items-center gap-2.5 px-4 py-2.5 bg-surface border border-border rounded-lg text-sm text-foreground hover:border-subtle transition-colors"
             >
               {/* Cursor logo icon */}
               <svg
@@ -83,11 +74,11 @@ export default function MCPPage() {
             </Link>
           </div>
 
-          <p className="text-sm text-[#888] mb-4">
-            Or manually add to <code className="text-[#ccc]">.cursor/mcp.json</code>:
+          <p className="text-sm text-muted mb-4">
+            Or manually add to <code className="text-foreground">.cursor/mcp.json</code>:
           </p>
-          <div className="bg-[#111] border border-[#333] p-4 overflow-x-auto">
-            <pre className="text-sm text-[#ccc]">
+          <div className="bg-surface border border-border p-4 overflow-x-auto">
+            <pre className="text-sm text-muted">
               {`{
   "mcpServers": {
     "v1": {
@@ -101,24 +92,24 @@ export default function MCPPage() {
 
         {/* Available Tools */}
         <section className="mb-12">
-          <h2 className="text-xs uppercase tracking-widest text-[#666] mb-4">Tools</h2>
+          <h2 className="text-xs uppercase tracking-widest text-subtle mb-4">Tools</h2>
           <div className="space-y-4">
-            <div className="border border-[#333] p-4">
-              <h3 className="text-white font-medium mb-2">package_health</h3>
-              <p className="text-sm text-[#888]">
+            <div className="border border-border p-4">
+              <h3 className="text-foreground font-medium mb-2">package_health</h3>
+              <p className="text-sm text-muted">
                 Latest version, vulnerabilities, health score, downloads, TypeScript support, and
                 maintenance status.
               </p>
             </div>
-            <div className="border border-[#333] p-4">
-              <h3 className="text-white font-medium mb-2">search_packages</h3>
-              <p className="text-sm text-[#888]">
+            <div className="border border-border p-4">
+              <h3 className="text-foreground font-medium mb-2">search_packages</h3>
+              <p className="text-sm text-muted">
                 Fast search across 3M+ packages. Filter by downloads, types, and category.
               </p>
             </div>
-            <div className="border border-[#333] p-4">
-              <h3 className="text-white font-medium mb-2">compare_packages</h3>
-              <p className="text-sm text-[#888]">
+            <div className="border border-border p-4">
+              <h3 className="text-foreground font-medium mb-2">compare_packages</h3>
+              <p className="text-sm text-muted">
                 Side-by-side comparison of health, security, and popularity.
               </p>
             </div>
@@ -127,19 +118,19 @@ export default function MCPPage() {
 
         {/* Links */}
         <section>
-          <h2 className="text-xs uppercase tracking-widest text-[#666] mb-4">Links</h2>
+          <h2 className="text-xs uppercase tracking-widest text-subtle mb-4">Links</h2>
           <div className="space-y-2 text-sm">
             <Link
               href="https://api.v1.run/mcp"
               target="_blank"
-              className="block text-[#888] hover:text-white transition-colors"
+              className="block text-muted hover:text-foreground transition-colors"
             >
               MCP Endpoint ↗
             </Link>
             <Link
               href="https://modelcontextprotocol.io"
               target="_blank"
-              className="block text-[#888] hover:text-white transition-colors"
+              className="block text-muted hover:text-foreground transition-colors"
             >
               MCP Documentation ↗
             </Link>
@@ -147,14 +138,7 @@ export default function MCPPage() {
         </section>
       </div>
 
-      {/* Footer */}
-      <footer className="border-t border-[#333] mt-12">
-        <div className="container-page py-4 text-xs text-[#666]">
-          <Link href="/" className="hover:text-white transition-colors">
-            v1.run
-          </Link>
-        </div>
-      </footer>
+      <Footer />
     </main>
   );
 }

@@ -2,14 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import {
-  Command,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
+import { Spinner } from "@/components/ui/spinner";
 import { useSearch } from "@/lib/hooks";
 import { formatDownloads } from "@/lib/api";
 
@@ -122,15 +116,20 @@ function CommandSearch({ open, setOpen }: CommandSearchProps) {
   const [query, setQuery] = useState("");
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const { data: results = [], isLoading, isFetched, debouncedQuery } = useSearch(query, 80);
 
-  // Keyboard shortcut: Cmd+K / Ctrl+K
+  // Keyboard shortcut: Cmd+K / Ctrl+K and Escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         setOpen(!open);
+      }
+      if (e.key === "Escape" && open) {
+        e.preventDefault();
+        setOpen(false);
       }
     };
 
@@ -138,13 +137,13 @@ function CommandSearch({ open, setOpen }: CommandSearchProps) {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open, setOpen]);
 
-  // Focus input when dialog opens
+  // Focus input when panel opens
   useEffect(() => {
     if (open) {
-      // Small delay to ensure dialog is mounted
+      // Small delay to ensure panel is mounted
       setTimeout(() => {
         inputRef.current?.focus();
-      }, 0);
+      }, 50);
     } else {
       // Clear query when closing
       setQuery("");
@@ -177,29 +176,51 @@ function CommandSearch({ open, setOpen }: CommandSearchProps) {
   const displayItems = query.trim() === "" ? POPULAR_PACKAGES : results;
   const showPopular = query.trim() === "" && !isLoading;
 
+  if (!open) return null;
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogHeader className="sr-only">
-        <DialogTitle>Search packages</DialogTitle>
-      </DialogHeader>
-      <DialogContent
-        className="bg-transparent! overflow-hidden p-0 border-0 shadow-2xl max-w-xl"
-        showCloseButton={false}
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-50 bg-black/50 animate-in fade-in-0 duration-200"
+        onClick={() => setOpen(false)}
+        aria-hidden="true"
+      />
+
+      {/* Bottom panel */}
+      <div
+        ref={panelRef}
+        className="fixed bottom-0 left-0 right-0 z-50 transition-transform duration-150 ease-out"
+        style={{
+          animation: "slideUp 150ms ease-out",
+        }}
       >
-        {/* Frosted glass container */}
-        <div className="overflow-hidden backdrop-blur-lg bg-[rgba(19,19,19,0.7)] border border-white/10">
+        <div className="bg-background border-t border-border">
           <Command className="bg-transparent" shouldFilter={false}>
-            <CommandInput
-              ref={inputRef}
-              placeholder="Search packages..."
-              value={query}
-              onValueChange={handleSearch}
-              className="h-12 text-white placeholder:text-[#555] bg-transparent border-0"
-            />
-            <CommandList className="h-[400px] max-h-none overflow-y-auto scrollbar-none">
+            {/* Search input - terminal style */}
+            <div className="border-b border-border px-6 py-4">
+              <div className="flex items-center gap-3 text-sm">
+                <span className="text-muted select-none">$</span>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={query}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="flex-1 bg-transparent text-foreground outline-none placeholder:text-subtle font-mono"
+                  placeholder="search packages..."
+                  spellCheck={false}
+                  autoComplete="off"
+                  autoCapitalize="off"
+                />
+                {isLoading && <Spinner />}
+              </div>
+            </div>
+
+            {/* Results - fixed height */}
+            <CommandList className="h-[400px] overflow-y-auto scrollbar-none p-2">
               {isLoading ? (
-                <div className="py-12 flex items-center justify-center text-sm text-[#555]">
-                  Searching...
+                <div className="py-12 flex items-center justify-center gap-2 text-sm text-muted">
+                  <Spinner /> searching
                 </div>
               ) : displayItems.length > 0 ? (
                 <CommandGroup heading={showPopular ? "Popular" : undefined}>
@@ -208,23 +229,23 @@ function CommandSearch({ open, setOpen }: CommandSearchProps) {
                       key={item.name}
                       value={item.name}
                       onSelect={() => handleSelect(item.name)}
-                      className="flex items-center gap-3 px-4 py-3 cursor-pointer text-[#666] data-[selected=true]:bg-white/5 data-[selected=true]:text-white"
+                      className="flex items-center gap-3 px-4 py-3 cursor-pointer text-subtle data-[selected=true]:bg-foreground/5 data-[selected=true]:text-foreground rounded-none"
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-[#ccc]">{item.name}</span>
-                          <span className="text-xs text-[#444]">v{item.version}</span>
+                          <span className="font-medium text-foreground/90">{item.name}</span>
+                          <span className="text-xs text-faint">v{item.version}</span>
                           {item.hasTypes && (
-                            <span className="text-[10px] text-blue-400/80 border border-blue-400/20 px-1">
+                            <span className="text-[10px] text-blue-600 dark:text-blue-400/80 border border-blue-600/20 dark:border-blue-400/20 px-1">
                               TS
                             </span>
                           )}
                         </div>
                         {item.description && (
-                          <p className="text-xs text-[#555] truncate mt-0.5">{item.description}</p>
+                          <p className="text-xs text-muted truncate mt-0.5">{item.description}</p>
                         )}
                       </div>
-                      <div className="text-xs text-[#444] whitespace-nowrap">
+                      <div className="text-xs text-faint whitespace-nowrap">
                         {formatDownloads(item.downloads)}/wk
                       </div>
                     </CommandItem>
@@ -232,15 +253,37 @@ function CommandSearch({ open, setOpen }: CommandSearchProps) {
                 </CommandGroup>
               ) : hasSearched ? (
                 <div className="py-12 flex flex-col items-center justify-center">
-                  <p className="text-sm text-[#555]">No packages found for "{query}"</p>
-                  <p className="text-xs text-[#444] mt-1">Press Enter to search on npm</p>
+                  <p className="text-sm text-muted">No packages found for "{query}"</p>
+                  <p className="text-xs text-faint mt-1">Press Enter to search on npm</p>
                 </div>
               ) : null}
             </CommandList>
+
+            {/* Footer hint */}
+            <div className="border-t border-border px-4 py-2 flex items-center justify-between text-xs text-faint">
+              <span>Type to search packages</span>
+              <span>
+                <kbd className="px-1.5 py-0.5 bg-surface border border-border rounded text-[10px]">
+                  esc
+                </kbd>{" "}
+                to close
+              </span>
+            </div>
           </Command>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+
+      <style jsx>{`
+        @keyframes slideUp {
+          from {
+            transform: translateY(100%);
+          }
+          to {
+            transform: translateY(0);
+          }
+        }
+      `}</style>
+    </>
   );
 }
 
@@ -251,7 +294,7 @@ export function SearchTrigger({ className }: { className?: string }) {
   return (
     <button
       onClick={() => setOpen(true)}
-      className={`text-xs text-[#666] hover:text-[#888] transition-colors ${className}`}
+      className={`text-xs text-subtle hover:text-muted transition-colors ${className}`}
     >
       /search
     </button>

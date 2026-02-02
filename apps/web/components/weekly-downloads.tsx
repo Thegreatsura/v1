@@ -57,7 +57,7 @@ export function WeeklyDownloads({ packageName, initialWeeklyDownloads }: WeeklyD
   return (
     <div className="flex items-center justify-between gap-2 h-[52px]">
       <div className="min-w-0">
-        <p className="text-xs text-[#666] uppercase tracking-wider mb-1">WEEKLY DOWNLOADS</p>
+        <p className="text-xs text-subtle uppercase tracking-wider mb-1">WEEKLY DOWNLOADS</p>
         <p className="text-lg font-mono">
           {initialWeeklyDownloads ? formatNumber(initialWeeklyDownloads) : "—"}
         </p>
@@ -66,9 +66,8 @@ export function WeeklyDownloads({ packageName, initialWeeklyDownloads }: WeeklyD
         data={sparklineData}
         width={100}
         height={32}
-        strokeColor="#666"
+        className="text-subtle"
         strokeWidth={1.5}
-        fillColor="#666"
       />
     </div>
   );

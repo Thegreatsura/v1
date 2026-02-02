@@ -6,6 +6,7 @@ const PACKAGE_MANAGERS = ["npm", "pnpm", "yarn", "bun", "deno", "vlt"] as const;
 type PackageManager = (typeof PACKAGE_MANAGERS)[number];
 
 const STORAGE_KEY = "v1.run:pm";
+const COMBINE_KEY = "v1.run:combine";
 
 function getStoredPm(): PackageManager {
   if (typeof window === "undefined") return "npm";
@@ -16,6 +17,13 @@ function getStoredPm(): PackageManager {
   return "npm";
 }
 
+function getStoredCombine(): boolean {
+  if (typeof window === "undefined") return true;
+  const stored = localStorage.getItem(COMBINE_KEY);
+  if (stored === "false") return false;
+  return true; // default to combined
+}
+
 interface InstallTabsProps {
   packageName: string;
   hasTypes?: boolean;
@@ -23,13 +31,15 @@ interface InstallTabsProps {
 
 export function InstallTabs({ packageName, hasTypes }: InstallTabsProps) {
   const [pm, setPm] = useState<PackageManager>("npm");
+  const [combine, setCombine] = useState(true);
   const [copied, setCopied] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Load saved preference on mount
+  // Load saved preferences on mount
   useEffect(() => {
     setPm(getStoredPm());
+    setCombine(getStoredCombine());
   }, []);
 
   // Close dropdown when clicking outside
@@ -50,7 +60,13 @@ export function InstallTabs({ packageName, hasTypes }: InstallTabsProps) {
     setIsOpen(false);
   };
 
-  const commands = getCommands(pm, packageName, hasTypes);
+  const handleCombineToggle = () => {
+    const newValue = !combine;
+    setCombine(newValue);
+    localStorage.setItem(COMBINE_KEY, String(newValue));
+  };
+
+  const commands = getCommands(pm, packageName, hasTypes, combine);
 
   const handleCopy = async (cmd: string) => {
     await navigator.clipboard.writeText(cmd);
@@ -58,50 +74,69 @@ export function InstallTabs({ packageName, hasTypes }: InstallTabsProps) {
     setTimeout(() => setCopied(null), 2000);
   };
 
+  const needsTypes = !hasTypes;
+
   return (
     <div className="space-y-3">
       {/* Header with label and dropdown */}
       <div className="flex items-center justify-between">
-        <span className="text-xs uppercase tracking-widest text-[#666]">install</span>
+        <span className="text-xs uppercase tracking-widest text-subtle">install</span>
 
-        <div className="relative" ref={dropdownRef}>
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium tracking-wide border border-[#444] text-[#888] hover:text-white hover:border-[#666] transition-all"
-          >
-            {pm}
-            <svg
-              className={`w-2.5 h-2.5 transition-transform ${isOpen ? "rotate-180" : ""}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+        <div className="flex items-center gap-2">
+          {/* Combine toggle - only show when types are needed */}
+          {needsTypes && (
+            <button
+              onClick={handleCombineToggle}
+              className={`px-2 py-1 text-xs tracking-wide border transition-all ${
+                combine
+                  ? "border-faint text-muted hover:text-foreground hover:border-subtle"
+                  : "border-faint text-subtle hover:text-muted hover:border-subtle"
+              }`}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-          </button>
-
-          {isOpen && (
-            <div className="absolute top-full right-0 mt-1 z-50 bg-black border border-[#333] min-w-[100px]">
-              {PACKAGE_MANAGERS.map((manager) => (
-                <button
-                  key={manager}
-                  onClick={() => handlePmChange(manager)}
-                  className={`block w-full text-left px-3 py-2 text-xs font-medium tracking-wide transition-colors ${
-                    pm === manager
-                      ? "bg-white text-black"
-                      : "text-[#888] hover:text-white hover:bg-[#111]"
-                  }`}
-                >
-                  {manager}
-                </button>
-              ))}
-            </div>
+              {combine ? "combined" : "separate"}
+            </button>
           )}
+
+          {/* Package manager dropdown */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium tracking-wide border border-faint text-muted hover:text-foreground hover:border-subtle transition-all"
+            >
+              {pm}
+              <svg
+                className={`w-2.5 h-2.5 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+
+            {isOpen && (
+              <div className="absolute top-full right-0 mt-1 z-50 bg-background border border-border min-w-[100px]">
+                {PACKAGE_MANAGERS.map((manager) => (
+                  <button
+                    key={manager}
+                    onClick={() => handlePmChange(manager)}
+                    className={`block w-full text-left px-3 py-2 text-xs font-medium tracking-wide transition-colors ${
+                      pm === manager
+                        ? "bg-foreground text-background"
+                        : "text-muted hover:text-foreground hover:bg-surface"
+                    }`}
+                  >
+                    {manager}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -111,22 +146,41 @@ export function InstallTabs({ packageName, hasTypes }: InstallTabsProps) {
           <div
             key={i}
             onClick={() => handleCopy(cmd.full)}
-            className={`group flex items-center justify-between border border-[#333] px-4 py-3 cursor-pointer transition-colors hover:border-white ${
-              cmd.muted ? "bg-black" : "bg-[#111]"
+            className={`group flex items-center justify-between border border-border px-4 py-3 cursor-pointer transition-colors hover:border-foreground ${
+              cmd.muted ? "bg-background" : "bg-surface"
             }`}
           >
             <code className="text-sm">
-              <span className="text-[#444] select-none">$ </span>
-              <span className={cmd.muted ? "text-[#666]" : "text-[#888]"}>{cmd.command}</span>{" "}
-              {cmd.subcommand && (
-                <span className={cmd.muted ? "text-[#666]" : "text-[#888]"}>{cmd.subcommand}</span>
-              )}{" "}
-              {cmd.flags && <span className="text-[#666]">{cmd.flags} </span>}
-              <span className="text-white font-bold">{cmd.package}</span>
+              <span className="text-faint select-none">$ </span>
+              {cmd.combined ? (
+                // Combined command display
+                <>
+                  <span className="text-muted">{cmd.command}</span>{" "}
+                  <span className="text-muted">{cmd.subcommand}</span>{" "}
+                  <span className="text-foreground font-bold">{cmd.package}</span>
+                  <span className="text-subtle"> {cmd.separator} </span>
+                  <span className="text-muted">{cmd.command2}</span>{" "}
+                  <span className="text-muted">{cmd.subcommand2}</span>{" "}
+                  {cmd.flags2 && <span className="text-subtle">{cmd.flags2} </span>}
+                  <span className="text-foreground font-bold">{cmd.package2}</span>
+                </>
+              ) : (
+                // Regular command display
+                <>
+                  <span className={cmd.muted ? "text-subtle" : "text-muted"}>{cmd.command}</span>{" "}
+                  {cmd.subcommand && (
+                    <span className={cmd.muted ? "text-subtle" : "text-muted"}>
+                      {cmd.subcommand}
+                    </span>
+                  )}{" "}
+                  {cmd.flags && <span className="text-subtle">{cmd.flags} </span>}
+                  <span className="text-foreground font-bold">{cmd.package}</span>
+                </>
+              )}
             </code>
             <span
               className={`text-xs uppercase tracking-wider transition-colors ${
-                copied === cmd.full ? "text-white" : "text-[#444] group-hover:text-[#888]"
+                copied === cmd.full ? "text-foreground" : "text-faint group-hover:text-muted"
               }`}
             >
               {copied === cmd.full ? "copied" : "copy"}
@@ -145,12 +199,112 @@ interface CommandParts {
   flags?: string;
   package: string;
   muted?: boolean;
+  // For combined commands
+  combined?: boolean;
+  separator?: string;
+  command2?: string;
+  subcommand2?: string;
+  flags2?: string;
+  package2?: string;
 }
 
-function getCommands(pm: PackageManager, name: string, hasTypes?: boolean): CommandParts[] {
+function getCommands(
+  pm: PackageManager,
+  name: string,
+  hasTypes?: boolean,
+  combine?: boolean,
+): CommandParts[] {
   const commands: CommandParts[] = [];
+  const typesPackage = `@types/${name.replace("@", "").replace("/", "__")}`;
+  const needsTypes = !hasTypes;
 
-  // Main install command
+  // If combining and needs types, return single combined command
+  if (combine && needsTypes) {
+    switch (pm) {
+      case "npm":
+        commands.push({
+          full: `npm install ${name} && npm install -D ${typesPackage}`,
+          command: "npm",
+          subcommand: "install",
+          package: name,
+          combined: true,
+          separator: "&&",
+          command2: "npm",
+          subcommand2: "install",
+          flags2: "-D",
+          package2: typesPackage,
+        });
+        break;
+      case "pnpm":
+        commands.push({
+          full: `pnpm add ${name} && pnpm add -D ${typesPackage}`,
+          command: "pnpm",
+          subcommand: "add",
+          package: name,
+          combined: true,
+          separator: "&&",
+          command2: "pnpm",
+          subcommand2: "add",
+          flags2: "-D",
+          package2: typesPackage,
+        });
+        break;
+      case "yarn":
+        commands.push({
+          full: `yarn add ${name} && yarn add -D ${typesPackage}`,
+          command: "yarn",
+          subcommand: "add",
+          package: name,
+          combined: true,
+          separator: "&&",
+          command2: "yarn",
+          subcommand2: "add",
+          flags2: "-D",
+          package2: typesPackage,
+        });
+        break;
+      case "bun":
+        commands.push({
+          full: `bun add ${name} && bun add -d ${typesPackage}`,
+          command: "bun",
+          subcommand: "add",
+          package: name,
+          combined: true,
+          separator: "&&",
+          command2: "bun",
+          subcommand2: "add",
+          flags2: "-d",
+          package2: typesPackage,
+        });
+        break;
+      case "deno":
+        // Deno can add both in single command
+        commands.push({
+          full: `deno add npm:${name} npm:${typesPackage}`,
+          command: "deno",
+          subcommand: "add",
+          package: `npm:${name} npm:${typesPackage}`,
+        });
+        break;
+      case "vlt":
+        commands.push({
+          full: `vlt install ${name} && vlt install -D ${typesPackage}`,
+          command: "vlt",
+          subcommand: "install",
+          package: name,
+          combined: true,
+          separator: "&&",
+          command2: "vlt",
+          subcommand2: "install",
+          flags2: "-D",
+          package2: typesPackage,
+        });
+        break;
+    }
+    return commands;
+  }
+
+  // Separate commands (original behavior)
   switch (pm) {
     case "npm":
       commands.push({
@@ -203,8 +357,7 @@ function getCommands(pm: PackageManager, name: string, hasTypes?: boolean): Comm
   }
 
   // Types command if package doesn't have built-in types
-  if (!hasTypes) {
-    const typesPackage = `@types/${name.replace("@", "").replace("/", "__")}`;
+  if (needsTypes) {
     switch (pm) {
       case "npm":
         commands.push({
