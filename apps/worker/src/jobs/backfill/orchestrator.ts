@@ -60,25 +60,39 @@ async function processBackfillTick(job: Job<BackfillJobData>): Promise<void> {
   // If total is 0, we need to initialize the package list (API started the backfill)
   if (state.total === 0) {
     console.log("[Backfill] Initializing full registry sync...");
+    console.log("[Backfill] Processing will start immediately as packages are fetched...");
 
     try {
-      const packages = await getAllPackages((count) => {
-        console.log(`[Backfill] Fetched ${count.toLocaleString()} packages`);
+      let batchesQueued = 0;
+
+      // Fetch packages and queue them immediately as each batch arrives
+      const packages = await getAllPackages(async (batch, totalSoFar, estimatedTotal) => {
+        // Queue this batch immediately
+        await queueBulkSync(batch);
+        batchesQueued++;
+
+        // Log progress
+        const pct = ((totalSoFar / estimatedTotal) * 100).toFixed(1);
+        console.log(
+          `[Backfill] Queued batch ${batchesQueued}: ${batch.length} packages | ` +
+            `Total: ${totalSoFar.toLocaleString()}/${estimatedTotal.toLocaleString()} (${pct}%)`,
+        );
       });
 
+      // Store full list for state tracking (offset will start at total since all are queued)
       await startBackfill(packages);
-      console.log(`[Backfill] Initialized: ${packages.length.toLocaleString()} packages to sync`);
+      // Mark all as already queued by setting offset to total
+      await updateProgress(packages.length, 0, packages.length);
+
+      console.log(`[Backfill] Initialized: ${packages.length.toLocaleString()} packages queued`);
+      console.log("[Backfill] All packages queued! Workers will process them.");
+
+      // Complete immediately since all packages are queued
+      await completeBackfill();
+      return;
     } catch (error) {
       console.error("[Backfill] Failed to initialize:", error);
       await errorBackfill(error instanceof Error ? error.message : "Unknown error");
-      return;
-    }
-
-    // Re-fetch state after initialization
-    const newState = await getBackfillState();
-    if (newState.total === 0) {
-      console.error("[Backfill] No packages to sync");
-      await completeBackfill();
       return;
     }
   }
@@ -214,28 +228,28 @@ export async function startBackfillProcess(): Promise<void> {
   }
 
   console.log("[Backfill] Starting full registry sync...");
+  console.log("[Backfill] Processing will start immediately as packages are fetched...");
 
-  // Fetch all packages
-  const packages = await getAllPackages((count) => {
-    console.log(`[Backfill] Fetched ${count.toLocaleString()} packages`);
+  let batchesQueued = 0;
+
+  // Fetch all packages and queue them immediately
+  const packages = await getAllPackages(async (batch, totalSoFar, estimatedTotal) => {
+    await queueBulkSync(batch);
+    batchesQueued++;
+
+    const pct = ((totalSoFar / estimatedTotal) * 100).toFixed(1);
+    console.log(
+      `[Backfill] Queued batch ${batchesQueued}: ${batch.length} packages | ` +
+        `Total: ${totalSoFar.toLocaleString()}/${estimatedTotal.toLocaleString()} (${pct}%)`,
+    );
   });
 
-  // Initialize state
+  // Store state for tracking
   await startBackfill(packages);
+  await updateProgress(packages.length, 0, packages.length);
 
-  console.log(`[Backfill] Initialized: ${packages.length.toLocaleString()} packages to sync`);
-
-  // Schedule first tick immediately
-  const queue = getBackfillQueue();
-  await queue.add(
-    "tick",
-    { action: "tick" },
-    {
-      jobId: `backfill-tick-${Date.now()}`,
-    },
-  );
-
-  console.log("[Backfill] Started! First tick scheduled.");
+  console.log(`[Backfill] Complete: ${packages.length.toLocaleString()} packages queued`);
+  console.log("[Backfill] Workers will now process the queue.");
 }
 
 /**
