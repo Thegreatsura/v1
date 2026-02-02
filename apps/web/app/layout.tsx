@@ -1,5 +1,6 @@
 import { GeistMono } from "geist/font/mono";
 import type { Metadata } from "next";
+import { OpenPanelComponent } from "@openpanel/nextjs";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
@@ -25,6 +26,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={GeistMono.variable}>
       <body className="font-mono">
+        <OpenPanelComponent
+          clientId={process.env.NEXT_PUBLIC_OPENPANEL_CLIENT_ID!}
+          trackScreenViews
+          trackOutgoingLinks
+        />
         <Providers>{children}</Providers>
       </body>
     </html>
