@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -21,7 +22,7 @@ export async function generateStaticParams() {
   return getStaticPackages().map((name) => ({ name }));
 }
 
-export async function generateMetadata({ params }: PageProps) {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { name } = await params;
   const decodedName = decodeURIComponent(name);
   const pkg = await getPackage(decodedName);
@@ -36,6 +37,9 @@ export async function generateMetadata({ params }: PageProps) {
   return {
     title,
     description,
+    alternates: {
+      canonical: `https://v1.run/${encodeURIComponent(pkg.name)}`,
+    },
     openGraph: {
       title: pkg.name,
       description,
@@ -62,23 +66,49 @@ export default async function PackagePage({ params }: PageProps) {
 
   const deps = Object.keys(pkg.dependencies || {});
 
-  const jsonLd = {
+  const softwareJsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareSourceCode",
     name: pkg.name,
     version: pkg.version,
     description: pkg.description,
+    url: `https://v1.run/${encodeURIComponent(pkg.name)}`,
     codeRepository: pkg.repository,
     programmingLanguage: "JavaScript",
+    runtimePlatform: "Node.js",
     author: pkg.author ? { "@type": "Person", name: pkg.author } : undefined,
     license: pkg.license,
+    dateModified: pkg.updated ? new Date(pkg.updated).toISOString() : undefined,
+  };
+
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: "https://v1.run",
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: pkg.name,
+        item: `https://v1.run/${encodeURIComponent(pkg.name)}`,
+      },
+    ],
   };
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
       <main className="min-h-screen bg-background text-foreground flex flex-col">
         <Header />

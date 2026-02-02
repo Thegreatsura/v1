@@ -9,6 +9,20 @@ export const metadata: Metadata = {
   title: "v1.run - npm for agents",
   description:
     "MCP-first npm registry. Security signals and package health in sub-100ms, globally.",
+  alternates: {
+    canonical: "https://v1.run",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   openGraph: {
     title: "v1.run - npm for agents",
     description:

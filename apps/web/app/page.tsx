@@ -175,7 +175,7 @@ export default function Home() {
 
           {/* Tagline */}
           <div className="text-center mb-8">
-            <p className="text-xl text-foreground">npm for agents</p>
+            <h1 className="text-xl text-foreground">npm for agents</h1>
             <p className="text-sm text-muted mt-2">
               MCP-first. Security signals. &lt;100ms globally.
             </p>

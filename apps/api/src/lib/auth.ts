@@ -10,6 +10,8 @@ import { db } from "./db";
 import { cache } from "./cache";
 import * as schema from "./auth-schema";
 
+const isProduction = process.env.BETTER_AUTH_URL?.includes("v1.run");
+
 // Only initialize auth if database is available
 export const auth = db
   ? betterAuth({
@@ -35,7 +37,7 @@ export const auth = db
         },
       },
 
-      // Session and cookie configuration for cross-subdomain auth
+      // Session and cookie configuration
       session: {
         cookieCache: {
           enabled: true,
@@ -43,15 +45,18 @@ export const auth = db
         },
       },
 
-      advanced: {
-        crossSubDomainCookies: {
-          enabled: true,
-          domain: ".v1.run", // Share cookies across api.v1.run and v1.run
-        },
-        defaultCookieAttributes: {
-          secure: true,
-          sameSite: "none", // Required for cross-origin requests
-        },
-      },
+      // Cross-subdomain cookies only in production (requires HTTPS)
+      advanced: isProduction
+        ? {
+            crossSubDomainCookies: {
+              enabled: true,
+              domain: ".v1.run", // Share cookies across api.v1.run and v1.run
+            },
+            defaultCookieAttributes: {
+              secure: true,
+              sameSite: "none", // Required for cross-origin requests
+            },
+          }
+        : undefined,
     })
   : null;
