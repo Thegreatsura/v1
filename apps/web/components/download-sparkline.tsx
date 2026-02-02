@@ -81,11 +81,11 @@ export function Sparkline({
           <pattern
             id="diagonalHatch"
             patternUnits="userSpaceOnUse"
-            width="2"
-            height="2"
+            width="3"
+            height="3"
             patternTransform="rotate(45)"
           >
-            <line x1="0" y1="0" x2="0" y2="2" stroke="#fff" strokeWidth="0.5" opacity="0.5" />
+            <line x1="0" y1="0" x2="0" y2="3" stroke="#fff" strokeWidth="0.5" opacity="0.5" />
           </pattern>
         </defs>
       )}

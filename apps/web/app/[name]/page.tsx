@@ -29,9 +29,24 @@ export async function generateMetadata({ params }: PageProps) {
     return { title: "Package Not Found" };
   }
 
+  const title = `${pkg.name} — v1.run`;
+  const description = pkg.description || `${pkg.name} npm package`;
+
   return {
-    title: `${pkg.name} — v1.run`,
-    description: pkg.description || `${pkg.name} npm package`,
+    title,
+    description,
+    openGraph: {
+      title: pkg.name,
+      description,
+      url: `https://v1.run/${encodeURIComponent(pkg.name)}`,
+      siteName: "v1.run",
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: pkg.name,
+      description,
+    },
   };
 }
 
