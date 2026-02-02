@@ -18,7 +18,7 @@ export const config = {
   // npm Registry
   npm: {
     registryUrl: "https://registry.npmjs.org",
-    replicateUrl: "https://replicate.npmjs.com",
+    replicateUrl: "https://replicate.npmjs.com/registry",
     downloadsUrl: "https://api.npmjs.org/downloads",
   },
 

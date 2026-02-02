@@ -7,7 +7,7 @@
 
 import { config } from "./config";
 import { connection } from "./lib/redis";
-import { streamChanges } from "./listeners/npm-changes";
+import { pollChanges, getCurrentSeq, type NpmChange } from "./listeners/npm-changes";
 import { queuePackageSync, getQueueStats } from "./jobs/npm-sync";
 
 let jobsQueued = 0;
@@ -27,49 +27,32 @@ async function logStats() {
   lastStatsTime = Date.now();
 }
 
+async function processChanges(changes: NpmChange[]): Promise<void> {
+  for (const change of changes) {
+    // Skip design docs
+    if (change.id.startsWith("_design/")) {
+      continue;
+    }
+
+    await queuePackageSync(change.id, change.seq, change.deleted);
+    jobsQueued++;
+  }
+
+  if (changes.length > 0) {
+    console.log(`[Listener] Queued ${changes.length} changes (last seq: ${changes[changes.length - 1]?.seq})`);
+  }
+}
+
 async function runChangesListener() {
   console.log("Starting npm changes listener...");
 
-  const since = "now";
-  let retries = 0;
-  const maxRetries = 10;
+  // Get current sequence to start from
+  const initialSeq = await getCurrentSeq();
+  console.log(`Current npm registry sequence: ${initialSeq}`);
+  console.log("Polling for changes (npm deprecated continuous streaming)...");
 
-  while (retries < maxRetries) {
-    try {
-      console.log(`Listening for changes from: ${since} (attempt ${retries + 1})`);
-
-      for await (const change of streamChanges(since)) {
-        // Reset retries on successful data
-        retries = 0;
-
-        // Skip design docs
-        if (change.id.startsWith("_design/")) {
-          continue;
-        }
-
-        await queuePackageSync(change.id, change.seq, change.deleted);
-        jobsQueued++;
-
-        if (jobsQueued % 100 === 0) {
-          await logStats();
-        }
-      }
-
-      // Stream ended normally, reconnect
-      console.log("Changes stream ended, reconnecting...");
-    } catch (error) {
-      retries++;
-      console.error(`Changes listener error (attempt ${retries}/${maxRetries}):`, error);
-
-      if (retries < maxRetries) {
-        const delay = Math.min(1000 * Math.pow(2, retries), 30000); // Exponential backoff, max 30s
-        console.log(`Retrying in ${delay / 1000}s...`);
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
-    }
-  }
-
-  throw new Error(`Failed to connect to npm changes feed after ${maxRetries} attempts`);
+  // Poll for changes - this runs forever
+  await pollChanges(initialSeq, processChanges, 5000);
 }
 
 async function shutdown() {
