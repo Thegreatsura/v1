@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { useSearch } from "@/lib/hooks";
+import { formatDownloads } from "@/lib/api";
 
 const ASCII_LOGO = `
 ██╗   ██╗ ██╗    ██████╗ ██╗   ██╗███╗   ██╗
@@ -13,26 +15,17 @@ const ASCII_LOGO = `
   ╚═══╝   ╚═╝ ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝
 `.trim();
 
-interface SearchResult {
-  name: string;
-  description?: string;
-  version: string;
-  downloads: number;
-  hasTypes: boolean;
-}
-
 export default function Home() {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [showCursor, setShowCursor] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  const { data: results = [], isLoading, isFetched, debouncedQuery } = useSearch(query, 80);
 
   // Blinking cursor effect
   useEffect(() => {
@@ -59,8 +52,6 @@ export default function Home() {
           setIsOpen(false);
         } else if (query) {
           setQuery("");
-          setResults([]);
-          setHasSearched(false);
         }
       }
     };
@@ -80,49 +71,22 @@ export default function Home() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Debounced search
+  // Open dropdown when query changes
   useEffect(() => {
-    if (!query.trim()) {
-      setResults([]);
+    if (query.trim()) {
+      setIsOpen(true);
       setSelectedIndex(0);
+    } else {
       setIsOpen(false);
-      setHasSearched(false);
-      return;
     }
+  }, [query]);
 
-    setIsOpen(true);
-    const abortController = new AbortController();
-    const timeoutId = setTimeout(async () => {
-      setIsSearching(true);
-      try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=6`, {
-          signal: abortController.signal,
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const hits = data.hits || [];
-          setResults(hits);
-          setSelectedIndex(0);
-          setHasSearched(true);
-          // Prefetch the first result immediately
-          if (hits[0]) {
-            router.prefetch(`/${encodeURIComponent(hits[0].name)}`);
-          }
-        }
-      } catch (err) {
-        if (err instanceof Error && err.name !== "AbortError") {
-          console.error("Search error:", err);
-        }
-      } finally {
-        setIsSearching(false);
-      }
-    }, 80); // 80ms debounce for snappier feel
-
-    return () => {
-      clearTimeout(timeoutId);
-      abortController.abort();
-    };
-  }, [query, router]);
+  // Prefetch first result
+  useEffect(() => {
+    if (results[0]) {
+      router.prefetch(`/${encodeURIComponent(results[0].name)}`);
+    }
+  }, [results, router]);
 
   // Scroll selected item into view
   useEffect(() => {
@@ -174,9 +138,7 @@ export default function Home() {
 
   const clearSearch = () => {
     setQuery("");
-    setResults([]);
     setIsOpen(false);
-    setHasSearched(false);
     setSelectedIndex(0);
   };
 
@@ -191,11 +153,7 @@ export default function Home() {
     }
   };
 
-  const formatDownloads = (num: number) => {
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-    if (num >= 1000) return `${(num / 1000).toFixed(0)}K`;
-    return num.toString();
-  };
+  const hasSearched = isFetched && debouncedQuery.length > 0;
 
   return (
     <main className="h-screen bg-black font-mono flex flex-col overflow-hidden relative">
@@ -247,7 +205,7 @@ export default function Home() {
                   autoComplete="off"
                   autoCapitalize="off"
                 />
-                {isSearching ? (
+                {isLoading ? (
                   <span className="text-neutral-600 text-xs">searching...</span>
                 ) : (
                   <span
@@ -278,12 +236,7 @@ export default function Home() {
                         setSelectedIndex(index);
                         router.prefetch(`/${encodeURIComponent(result.name)}`);
                       }}
-                      onClick={() => {
-                        setIsOpen(false);
-                        setQuery("");
-                        setResults([]);
-                        setHasSearched(false);
-                      }}
+                      onClick={() => clearSearch()}
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
@@ -310,7 +263,7 @@ export default function Home() {
                       </div>
                     </Link>
                   ))
-                ) : hasSearched && !isSearching ? (
+                ) : hasSearched && !isLoading ? (
                   <div className="px-4 py-6 text-center">
                     <p className="text-neutral-500 text-sm">No packages found for "{query}"</p>
                     <p className="text-neutral-600 text-xs mt-1">Press Enter to search on npm</p>

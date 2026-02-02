@@ -10,6 +10,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { z } from "zod";
+import { searchPackages as typesenseSearch } from "./lib/clients/typesense";
 import { getReplacementStats, initReplacements } from "./lib/replacements";
 import { getPackageHealth } from "./tools/health";
 import {
@@ -33,7 +34,22 @@ console.log(
 
 // Middleware
 app.use("*", logger());
-app.use("*", cors());
+app.use(
+  "*",
+  cors({
+    origin: (origin) => {
+      // Allow localhost in development
+      if (origin?.includes("localhost")) return origin;
+      // Allow production domains
+      if (origin?.endsWith(".v1.run") || origin === "https://v1.run") return origin;
+      // Allow no origin (same-origin requests, curl, etc.)
+      return origin || "*";
+    },
+    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowHeaders: ["Content-Type"],
+    credentials: true,
+  }),
+);
 
 // Health check
 app.get("/health", (c) => {
@@ -300,6 +316,35 @@ mcpServer.connect(mcpTransport).then(() => {
 // MCP endpoint - handles all MCP protocol communication
 app.all("/mcp", async (c) => {
   return mcpTransport.handleRequest(c.req.raw);
+});
+
+// Search endpoint
+app.get("/search", async (c) => {
+  const query = c.req.query("q") || "";
+  const limit = Math.min(Number.parseInt(c.req.query("limit") || "10"), 100);
+
+  if (!query.trim()) {
+    return c.json({ hits: [], found: 0 });
+  }
+
+  try {
+    const results = await typesenseSearch(query, { limit });
+    return c.json({
+      hits: results.map((pkg) => ({
+        name: pkg.name,
+        description: pkg.description,
+        version: pkg.version,
+        downloads: pkg.downloads,
+        hasTypes: pkg.hasTypes,
+        license: pkg.license,
+        deprecated: pkg.deprecated,
+      })),
+      found: results.length,
+    });
+  } catch (error) {
+    console.error("Search error:", error);
+    return c.json({ error: "Search failed" }, 500);
+  }
 });
 
 // REST API endpoints (for non-MCP clients)

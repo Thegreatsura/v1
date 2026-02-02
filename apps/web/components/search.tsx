@@ -10,19 +10,14 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-
-interface SearchResult {
-  name: string;
-  description: string;
-  version: string;
-  downloads: number;
-}
+import { useSearch } from "@/lib/hooks";
+import { formatDownloads } from "@/lib/api";
 
 export function Search() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+
+  const { data: results = [], isLoading } = useSearch(query, 150);
 
   // Keyboard shortcut
   useEffect(() => {
@@ -37,48 +32,9 @@ export function Search() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const handleSearch = useCallback(async (value: string) => {
+  const handleSearch = useCallback((value: string) => {
     setQuery(value);
-    if (!value.trim()) {
-      setResults([]);
-      return;
-    }
-
-    setIsSearching(true);
-    // TODO: Integrate with Typesense
-    // For now, show mock results
-    setTimeout(() => {
-      setResults(
-        [
-          {
-            name: "react",
-            description: "React is a JavaScript library for building user interfaces.",
-            version: "19.0.0",
-            downloads: 58000000,
-          },
-          {
-            name: "react-dom",
-            description: "React package for working with the DOM.",
-            version: "19.0.0",
-            downloads: 55000000,
-          },
-          {
-            name: "react-router",
-            description: "Declarative routing for React",
-            version: "7.0.0",
-            downloads: 12000000,
-          },
-        ].filter((r) => r.name.includes(value.toLowerCase())),
-      );
-      setIsSearching(false);
-    }, 100);
   }, []);
-
-  const formatDownloads = (num: number) => {
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-    return num.toString();
-  };
 
   return (
     <>
@@ -106,7 +62,7 @@ export function Search() {
             />
             <CommandList className="max-h-[400px]">
               <CommandEmpty className="py-12 text-center text-sm text-muted-foreground">
-                {isSearching ? "Searching..." : "No packages found."}
+                {isLoading ? "Searching..." : query ? "No packages found." : "Type to search..."}
               </CommandEmpty>
               {results.length > 0 && (
                 <CommandGroup heading="Packages">

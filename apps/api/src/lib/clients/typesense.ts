@@ -7,12 +7,15 @@
 import Typesense from "typesense";
 
 // Initialize client from environment
+const protocol = process.env.TYPESENSE_PROTOCOL || "https";
+const defaultPort = protocol === "https" ? 443 : 8108;
+
 const typesenseClient = new Typesense.Client({
   nodes: [
     {
       host: process.env.TYPESENSE_HOST || "localhost",
-      port: parseInt(process.env.TYPESENSE_PORT || "8108"),
-      protocol: process.env.TYPESENSE_PROTOCOL || "http",
+      port: Number.parseInt(process.env.TYPESENSE_PORT || String(defaultPort)),
+      protocol,
     },
   ],
   apiKey: process.env.TYPESENSE_API_KEY || "xyz",
