@@ -174,9 +174,9 @@ export default function Home() {
 
           {/* Tagline */}
           <div className="text-center mb-8">
-            <p className="text-xl text-neutral-200">npm, for agents</p>
+            <p className="text-xl text-neutral-200">The fastest npm</p>
             <p className="text-sm text-neutral-500 mt-2">
-              So they recommend packages that are secure, maintained, and actually used
+              Health scores, security, and real stats — for humans and agents
             </p>
           </div>
 
@@ -274,39 +274,25 @@ export default function Home() {
             )}
           </div>
 
-          {/* Help */}
-          <div className="text-xs text-neutral-600 mt-4 text-center">
-            {isOpen && results.length > 0 ? (
-              <>
-                <span className="text-neutral-500">↑↓</span> navigate ·{" "}
-                <span className="text-neutral-500">enter</span> select ·{" "}
-                <span className="text-neutral-500">esc</span> close
-              </>
-            ) : (
-              <>
-                <span className="text-neutral-500">⌘K</span> search ·{" "}
-                <span className="text-neutral-500">enter</span> go · try{" "}
-                <span className="text-neutral-400">react</span>,{" "}
-                <span className="text-neutral-400">next</span>,{" "}
-                <span className="text-neutral-400">zod</span>
-              </>
+          {/* Featured packages */}
+          <div className="text-xs mt-6">
+            {["next", "react", "drizzle-orm", "hono", "tailwindcss", "typescript", "vite"].map(
+              (pkg, i, arr) => (
+                <span key={pkg}>
+                  <Link
+                    href={`/${pkg}`}
+                    prefetch={true}
+                    className="text-neutral-700 hover:text-white transition-colors"
+                  >
+                    {pkg}
+                  </Link>
+                  {i < arr.length - 1 && <span className="text-neutral-700"> · </span>}
+                </span>
+              ),
             )}
           </div>
         </div>
 
-        {/* Status line */}
-        <div className="flex items-center justify-between text-xs text-neutral-600 border-t border-neutral-900 pt-3 mt-auto">
-          <div className="flex items-center gap-6">
-            <span>3.2M packages indexed</span>
-            <span>Downloads · Types · Security · Size</span>
-          </div>
-          <a
-            href="https://github.com"
-            className="text-neutral-600 hover:text-neutral-400 transition-colors"
-          >
-            GITHUB
-          </a>
-        </div>
       </div>
     </main>
   );
