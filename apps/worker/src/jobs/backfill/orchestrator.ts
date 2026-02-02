@@ -160,7 +160,10 @@ export function createBackfillWorker() {
   });
 
   // Check for pending backfill on startup
-  checkAndScheduleBackfill();
+  console.log("[Backfill] Worker started, checking for pending backfills...");
+  checkAndScheduleBackfill().catch((err) => {
+    console.error("[Backfill] Error checking for pending backfills:", err);
+  });
 
   return worker;
 }
@@ -171,7 +174,11 @@ export function createBackfillWorker() {
  */
 export async function checkAndScheduleBackfill(): Promise<void> {
   try {
+    console.log("[Backfill] Checking for pending backfills...");
     const state = await getBackfillState();
+    console.log(
+      `[Backfill] State: status=${state.status}, total=${state.total}, offset=${state.offset}`,
+    );
 
     if (state.status === "running") {
       const queue = getBackfillQueue();
@@ -180,7 +187,7 @@ export async function checkAndScheduleBackfill(): Promise<void> {
         (jobCounts.waiting || 0) + (jobCounts.active || 0) + (jobCounts.delayed || 0);
 
       if (pendingJobs === 0) {
-        console.log("[Backfill] Found running backfill with no pending ticks, scheduling...");
+        console.log("[Backfill] No pending ticks, scheduling one now...");
         await queue.add(
           "tick",
           { action: "tick" },
@@ -188,9 +195,12 @@ export async function checkAndScheduleBackfill(): Promise<void> {
             jobId: `backfill-tick-${Date.now()}`,
           },
         );
+        console.log("[Backfill] Tick scheduled!");
       } else {
-        console.log(`[Backfill] Found running backfill with ${pendingJobs} pending tick(s)`);
+        console.log(`[Backfill] Found ${pendingJobs} pending tick(s), skipping`);
       }
+    } else {
+      console.log(`[Backfill] No running backfill (status: ${state.status})`);
     }
   } catch (error) {
     console.error("[Backfill] Error checking backfill state:", error);
