@@ -23,7 +23,7 @@ export function createWorkers() {
 
   const bulkSyncWorker = createWorker<BulkSyncJobData>(NPM_BULK_SYNC_QUEUE, processBulkSyncJob, {
     concurrency: 2,
-    limiter: { max: 20, duration: 60000 },
+    limiter: { max: 50, duration: 60000 }, // 50 jobs/min = 2,500 pkg/min (~42 npm req/sec)
   });
 
   const backfillWorker = createBackfillWorker();

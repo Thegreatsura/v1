@@ -162,7 +162,15 @@ export async function upsertPackages(packages: PackageDocument[]) {
 
   const failed = results.filter((r) => !r.success);
   if (failed.length > 0) {
-    console.error(`Failed to upsert ${failed.length} packages:`, failed.slice(0, 5));
+    const errors = failed.slice(0, 3).map((f) => f.error || "unknown error");
+    console.error(`Failed to upsert ${failed.length}/${packages.length} packages:`, errors);
+
+    // If more than half failed, throw to retry the job
+    if (failed.length > packages.length / 2) {
+      throw new Error(
+        `Typesense import failed: ${failed.length}/${packages.length} packages failed. Errors: ${errors.join(", ")}`,
+      );
+    }
   }
 
   return results;
