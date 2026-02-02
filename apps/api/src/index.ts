@@ -28,7 +28,7 @@ const PORT = process.env.PORT || 3001;
 initReplacements();
 const replacementStats = getReplacementStats();
 console.log(
-  `[Startup] Loaded ${replacementStats.totalModules} modules with ${replacementStats.totalReplacements} replacements`,
+  `[Startup] Loaded ${replacementStats.totalModules} modules (${replacementStats.nativeModules} native)`,
 );
 
 // Middleware

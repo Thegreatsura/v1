@@ -5,11 +5,10 @@
  * Contains curated replacement mappings from the community.
  */
 
-import { all, type ManifestReplacement, nativeReplacements } from "module-replacements";
+import { all, nativeReplacements, type ModuleReplacement } from "module-replacements";
 
 // In-memory maps for O(1) lookup
-const moduleToReplacements = new Map<string, string[]>();
-const replacementDetails = new Map<string, ManifestReplacement>();
+const moduleToReplacement = new Map<string, ModuleReplacement>();
 const nativeModules = new Set<string>();
 
 // Initialize on module load
@@ -21,34 +20,28 @@ let initialized = false;
 export function initReplacements(): void {
   if (initialized) return;
 
-  // Load all modules
-  for (const mod of all.modules) {
-    moduleToReplacements.set(mod.id, mod.replacements);
-  }
-
-  // Load all replacement details
-  for (const rep of all.replacements) {
-    replacementDetails.set(rep.id, rep);
+  // Load all module replacements
+  for (const rep of all.moduleReplacements) {
+    moduleToReplacement.set(rep.moduleName, rep);
   }
 
   // Load native modules
-  for (const mod of nativeReplacements.modules) {
-    nativeModules.add(mod.id);
+  for (const rep of nativeReplacements.moduleReplacements) {
+    nativeModules.add(rep.moduleName);
   }
 
   initialized = true;
   console.log(
-    `[Replacements] Loaded ${moduleToReplacements.size} modules, ` +
-      `${replacementDetails.size} replacements, ${nativeModules.size} native`,
+    `[Replacements] Loaded ${moduleToReplacement.size} modules, ${nativeModules.size} native`,
   );
 }
 
 /**
- * Get replacement IDs for a package (instant O(1) lookup)
+ * Get replacement for a package (instant O(1) lookup)
  */
-export function getReplacementIds(packageName: string): string[] | null {
+export function getReplacement(packageName: string): ModuleReplacement | null {
   if (!initialized) initReplacements();
-  return moduleToReplacements.get(packageName) || null;
+  return moduleToReplacement.get(packageName) || null;
 }
 
 /**
@@ -60,54 +53,53 @@ export function hasNativeReplacement(packageName: string): boolean {
 }
 
 /**
- * Get replacement details by ID
- */
-export function getReplacementDetails(id: string): ManifestReplacement | null {
-  if (!initialized) initReplacements();
-  return replacementDetails.get(id) || null;
-}
-
-/**
  * Format replacement info for API response
  */
 export interface ReplacementInfo {
-  type: "native" | "optimisation" | "none";
-  useInstead?: string;
-  alternatives?: string[];
+  type: "native" | "documented" | "simple" | "none";
+  replacement?: string;
   reason?: string;
   url?: string;
-  example?: string;
 }
 
 export function formatReplacement(packageName: string): ReplacementInfo | null {
   if (!initialized) initReplacements();
 
-  const replacementIds = moduleToReplacements.get(packageName);
-  if (!replacementIds || replacementIds.length === 0) return null;
+  const rep = moduleToReplacement.get(packageName);
+  if (!rep) return null;
 
   const isNative = nativeModules.has(packageName);
-  const firstReplacement = replacementDetails.get(replacementIds[0] || "");
 
-  if (!firstReplacement) {
-    return {
-      type: isNative ? "native" : "optimisation",
-      alternatives: replacementIds,
-      reason: isNative
-        ? "Can be replaced with native JavaScript"
-        : "Consider using a lighter alternative",
-    };
+  switch (rep.type) {
+    case "native":
+      return {
+        type: "native",
+        replacement: rep.replacement,
+        reason: `Use native JavaScript (Node ${rep.nodeVersion}+)`,
+        url: `https://developer.mozilla.org${rep.mdnPath}`,
+      };
+    case "documented":
+      return {
+        type: "documented",
+        reason: "See documentation for alternatives",
+        url: `https://github.com/AikidoSec/module-replacements/blob/main/docs/${rep.docPath}`,
+      };
+    case "simple":
+      return {
+        type: "simple",
+        replacement: rep.replacement,
+        reason: isNative
+          ? "Can be replaced with native JavaScript"
+          : "Consider using a lighter alternative",
+      };
+    case "none":
+      return {
+        type: "none",
+        reason: "This module may not be needed",
+      };
+    default:
+      return null;
   }
-
-  return {
-    type: isNative ? "native" : "optimisation",
-    useInstead: firstReplacement.id,
-    alternatives: replacementIds.length > 1 ? replacementIds : undefined,
-    reason: isNative
-      ? "Can be replaced with native JavaScript"
-      : "Consider using a lighter/better maintained alternative",
-    url: firstReplacement.url,
-    example: firstReplacement.example,
-  };
 }
 
 /**
@@ -115,13 +107,11 @@ export function formatReplacement(packageName: string): ReplacementInfo | null {
  */
 export function getReplacementStats(): {
   totalModules: number;
-  totalReplacements: number;
   nativeModules: number;
 } {
   if (!initialized) initReplacements();
   return {
-    totalModules: moduleToReplacements.size,
-    totalReplacements: replacementDetails.size,
+    totalModules: moduleToReplacement.size,
     nativeModules: nativeModules.size,
   };
 }

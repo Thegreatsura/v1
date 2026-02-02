@@ -4,11 +4,12 @@
  * Adds jobs to the worker's sync queue with deduplication.
  */
 
-import { closeAllQueues, getQueue, JOB_PRESETS, type Queue } from "@v1/queue";
+import { closeAllQueues, getConnectionInfo, getQueue, JOB_PRESETS, type Queue } from "@v1/queue";
 import { NPM_SYNC_QUEUE, type SyncJobData } from "@v1/queue/npm-sync";
-import { cache } from "./redis";
+import { cache } from "./cache";
 
 let syncQueue: Queue<SyncJobData> | null = null;
+let logged = false;
 
 function getSyncQueue(): Queue<SyncJobData> {
   if (!syncQueue) {
@@ -16,6 +17,11 @@ function getSyncQueue(): Queue<SyncJobData> {
       name: NPM_SYNC_QUEUE,
       defaultJobOptions: JOB_PRESETS.standard,
     });
+    if (!logged) {
+      const info = getConnectionInfo();
+      console.log(`[Queue] Connected to ${info.host}:${info.port}`);
+      logged = true;
+    }
   }
   return syncQueue;
 }

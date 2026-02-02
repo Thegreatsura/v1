@@ -129,10 +129,10 @@ Centralized API clients used by both worker and API:
 |-------|------|-----|----------|
 | Cloudflare | HTML pages, static assets | 1 hour (stale-while-revalidate: 1 day) | Edge (300+ locations) |
 | Next.js ISR | Package pages | 1 hour | Railway (3 regions) |
-| Redis | Health data, scores, GitHub data | 1 hour - 7 days | Railway (1 region) |
+| In-memory LRU | Health data, scores, GitHub data | 1 hour - 7 days | API instances (3 regions) |
 | Typesense | Search index | Real-time sync | Cloud SDN (3 regions) |
 
-### Redis Cache Keys
+### In-Memory Cache Keys (API)
 
 | Key Pattern | Data | TTL |
 |-------------|------|-----|
@@ -142,7 +142,9 @@ Centralized API clients used by both worker and API:
 | `pkg:{name}:details` | Enriched package details | 1 day |
 | `pkg:{name}:security` | Security signals | 1 day |
 | `pkg:{name}:trend` | Download trend analysis | 1 day |
-| `queued:{name}` | Deduplication flag | 5 minutes |
+| `queued:{name}` | Queue deduplication flag | 5 minutes |
+
+**Note:** Cache is per-instance (not shared across regions) and cleared on restart.
 
 ## Prerequisites
 
@@ -172,13 +174,43 @@ Centralized API clients used by both worker and API:
 ```
 v1-run (Project)
 ├── web (Service) - 3 replicas (Amsterdam, Virginia, California)
-├── api (Service) - MCP + REST API server
+├── api (Service) - 3 replicas (Amsterdam, Virginia, California) [in-memory cache]
 ├── listener (Service) - npm changes listener (producer)
 ├── processor (Service) - job processor (worker)
-└── redis (Database) - BullMQ queue + API cache
+└── redis-queue (Database) - BullMQ queue (central, US East)
 ```
 
-**Note**: The API, worker services, and Redis are deployed to a single region (US East) since they need to communicate with each other. Only the web app requires multi-region for low-latency serving.
+### Multi-Region Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                       Web (3 regions)                           │
+│            Amsterdam      Virginia      California              │
+└───────────────┬──────────────┬──────────────┬───────────────────┘
+                │              │              │
+                ▼              ▼              ▼
+┌───────────────────┐ ┌───────────────┐ ┌───────────────────┐
+│   API (Amsterdam) │ │ API (Virginia)│ │ API (California)  │
+│  [in-memory LRU]  │ │[in-memory LRU]│ │  [in-memory LRU]  │
+└─────────┬─────────┘ └───────┬───────┘ └─────────┬─────────┘
+          │                   │                   │
+          └───────────────────┼───────────────────┘
+                              │ (queue only, async)
+                              ▼
+              ┌───────────────────────────────────┐
+              │      Virginia (US East)           │
+              │  ┌─────────────┐   ┌──────────┐   │
+              │  │ Queue Redis │◀──│  Worker  │   │
+              │  │(redis-queue)│   │          │   │
+              │  └─────────────┘   └──────────┘   │
+              └───────────────────────────────────┘
+```
+
+**Key points:**
+- **In-memory LRU cache** - Each API instance has fast local cache (~0ms)
+- **Queue Redis** (1x) - Central BullMQ queue in US East
+- Queue operations are async/non-blocking, so cross-region latency doesn't affect response time
+- Cache is cleared on restart (acceptable - data refetched from Typesense/npm)
 
 ### Automatic Import (Recommended)
 
@@ -200,8 +232,9 @@ If auto-import doesn't work:
    - API: `/apps/api/railway.json`
    - Listener: `/apps/worker/railway.listener.json`
    - Processor: `/apps/worker/railway.processor.json`
-3. Add a Redis database: **+ New** → **Database** → **Redis**
-4. Link Redis to API and worker services using: `${{redis.REDIS_URL}}`
+3. Add **one** Redis database:
+   - `redis-queue` (Virginia region) - BullMQ queue
+4. Configure environment variables (see below)
 
 ## Step 3: Environment Variables
 
@@ -220,9 +253,11 @@ If auto-import doesn't work:
 | Variable | Description |
 |----------|-------------|
 | `PORT` | Port to listen on (default: 3001) |
-| `REDIS_URL` | Redis connection URL |
+| `REDIS_URL` | Queue Redis URL (`${{redis-queue.REDIS_URL}}`) |
 | `TYPESENSE_API_KEY` | Admin API key from Typesense Cloud |
 | `TYPESENSE_HOST` | Typesense Cloud nearest node host |
+
+**Note:** API uses in-memory LRU cache. Redis is only used for the BullMQ queue.
 
 ### Worker Services (Listener & Processor)
 
@@ -230,11 +265,9 @@ If auto-import doesn't work:
 |----------|-------------|
 | `TYPESENSE_API_KEY` | Admin API key from Typesense Cloud |
 | `TYPESENSE_HOST` | Typesense Cloud nearest node host |
-| `REDIS_URL` | Redis connection URL |
+| `REDIS_URL` | Queue Redis URL (`${{redis-queue.REDIS_URL}}`) |
 | `WEB_URL` | (Optional) Web app URL for auto-revalidation |
 | `REVALIDATE_TOKEN` | (Optional) Token for triggering ISR revalidation |
-
-**Note**: On Railway, use `${{redis.REDIS_URL}}` reference variable to automatically inject the Redis URL.
 
 ## Step 4: Cloudflare Setup
 

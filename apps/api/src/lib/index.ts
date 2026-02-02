@@ -10,7 +10,7 @@ export * from "./clients/index";
 export * from "./enrichment";
 export * from "./health-score";
 // Redis cache
-export * from "./redis";
+export * from "./cache";
 
 // Module replacements (in-memory)
 export * from "./replacements";

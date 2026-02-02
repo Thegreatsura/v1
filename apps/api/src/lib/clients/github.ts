@@ -5,7 +5,7 @@
  */
 
 import { fetchGitHubRepoBasic, parseGitHubUrl } from "@v1/data/github";
-import { CacheKey, cache, TTL } from "../redis";
+import { CacheKey, cache, TTL } from "../cache";
 
 // Re-export types and utilities
 export { type GitHubRepoData, parseGitHubUrl } from "@v1/data/github";

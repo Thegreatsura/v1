@@ -35,7 +35,7 @@ import {
   type HealthAssessment,
 } from "../lib/health-score";
 import { queuePackageSync } from "../lib/queue";
-import { CacheKey, cache, TTL } from "../lib/redis";
+import { CacheKey, cache, TTL } from "../lib/cache";
 import { formatReplacement, type ReplacementInfo } from "../lib/replacements";
 
 /**

@@ -5,7 +5,7 @@
  */
 
 import { fetchNpmsScores as fetchNpmsScoresRaw, type NpmsScores } from "@v1/data/npms";
-import { CacheKey, cache, TTL } from "../redis";
+import { CacheKey, cache, TTL } from "../cache";
 
 // Re-export type
 export type { NpmsScores } from "@v1/data/npms";

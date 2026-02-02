@@ -5,7 +5,7 @@
  * This includes details, security signals, and other computed data.
  */
 
-import { CacheKey, cache, TTL } from "./redis";
+import { CacheKey, cache, TTL } from "./cache";
 
 const NPM_REGISTRY = "https://registry.npmjs.org";
 
