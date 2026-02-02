@@ -37,6 +37,7 @@ process.on("SIGTERM", shutdown);
 async function main() {
   console.log("Worker Processor starting...");
   console.log(`Typesense: ${config.typesense.nearestNode.host}:${config.typesense.nearestNode.port}`);
+  console.log(`Typesense API Key: ${config.typesense.apiKey ? `${config.typesense.apiKey.slice(0, 4)}...${config.typesense.apiKey.slice(-4)}` : "(empty)"}`);
   console.log(`Redis: ${connection.host}:${connection.port}`);
 
   // Ensure Typesense collection exists
