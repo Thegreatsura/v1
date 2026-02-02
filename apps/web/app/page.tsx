@@ -276,23 +276,29 @@ export default function Home() {
 
           {/* Featured packages */}
           <div className="text-xs mt-6">
-            {["next", "react", "drizzle-orm", "hono", "tailwindcss", "typescript", "vite"].map(
-              (pkg, i, arr) => (
-                <span key={pkg}>
-                  <Link
-                    href={`/${pkg}`}
-                    prefetch={true}
-                    className="text-neutral-700 hover:text-white transition-colors"
-                  >
-                    {pkg}
-                  </Link>
-                  {i < arr.length - 1 && <span className="text-neutral-700"> · </span>}
-                </span>
-              ),
-            )}
+            {[
+              "next",
+              "react",
+              "zod",
+              "drizzle-orm",
+              "hono",
+              "tailwindcss",
+              "typescript",
+              "vite",
+            ].map((pkg, i, arr) => (
+              <span key={pkg}>
+                <Link
+                  href={`/${pkg}`}
+                  prefetch={true}
+                  className="text-neutral-700 hover:text-white transition-colors"
+                >
+                  {pkg}
+                </Link>
+                {i < arr.length - 1 && <span className="text-neutral-700"> · </span>}
+              </span>
+            ))}
           </div>
         </div>
-
       </div>
     </main>
   );

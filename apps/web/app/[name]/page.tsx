@@ -1,6 +1,8 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { SearchTrigger } from "@/components/command-search";
 import { InstallTabs } from "@/components/install-tabs";
 import { TimeAgo } from "@/components/time-ago";
 import { WeeklyDownloads } from "@/components/weekly-downloads";
@@ -78,6 +80,23 @@ export default async function PackagePage({ params }: PageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <main className="min-h-screen bg-black text-white">
+        {/* Header */}
+        <header className="border-b border-[#333]">
+          <div className="container-page flex py-3 items-center gap-6">
+            <Link href="/" className="shrink-0 hover:opacity-80 transition-opacity">
+              <Image src="/logo.svg" alt="V1" width={32} height={22} />
+            </Link>
+            <SearchTrigger />
+            <div className="flex-1" />
+            <Link
+              href="/mcp"
+              className="text-xs uppercase tracking-wider text-[#666] hover:text-white transition-colors"
+            >
+              MCP
+            </Link>
+          </div>
+        </header>
+
         {/* Package Title Bar */}
         <div className="border-b border-[#333]">
           <div className="container-page py-6">
@@ -406,7 +425,10 @@ export default async function PackagePage({ params }: PageProps) {
             <Link href="/" className="hover:text-white transition-colors">
               v1.run
             </Link>
-            <Link href="/mcp" className="hover:text-white transition-colors uppercase tracking-wider">
+            <Link
+              href="/mcp"
+              className="hover:text-white transition-colors uppercase tracking-wider"
+            >
               MCP
             </Link>
           </div>
