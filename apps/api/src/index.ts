@@ -98,8 +98,12 @@ app.get("/health", (c) => {
 // Better Auth routes
 if (auth) {
   const authHandler = auth.handler;
-  app.on(["POST", "GET"], "/api/auth/*", (c) => {
-    return authHandler(c.req.raw);
+  app.on(["POST", "GET"], "/api/auth/*", async (c) => {
+    const response = await authHandler(c.req.raw);
+    // Prevent caching of auth responses
+    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    response.headers.set("Pragma", "no-cache");
+    return response;
   });
   console.log("[Auth] Better Auth routes mounted at /api/auth/*");
 } else {
