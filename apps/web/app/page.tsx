@@ -174,9 +174,9 @@ export default function Home() {
 
           {/* Tagline */}
           <div className="text-center mb-8">
-            <p className="text-xl text-neutral-200">The fastest npm</p>
+            <p className="text-xl text-neutral-200">npm for agents</p>
             <p className="text-sm text-neutral-500 mt-2">
-              Health scores, security, and real stats — for humans and agents
+              MCP-first. Security signals. Sub-100ms globally.
             </p>
           </div>
 

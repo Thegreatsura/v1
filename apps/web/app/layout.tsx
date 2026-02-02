@@ -4,19 +4,20 @@ import { Providers } from "@/components/providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "v1.run - The fastest npm",
-  description: "Health scores, security, and real stats — for humans and agents",
+  metadataBase: new URL("https://v1.run"),
+  title: "v1.run - npm for agents",
+  description: "MCP-first npm registry. Security signals and package health in sub-100ms, globally.",
   openGraph: {
-    title: "v1.run - The fastest npm",
-    description: "Health scores, security, and real stats — for humans and agents",
+    title: "v1.run - npm for agents",
+    description: "MCP-first npm registry. Security signals and package health in sub-100ms, globally.",
     url: "https://v1.run",
     siteName: "v1.run",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "v1.run - The fastest npm",
-    description: "Health scores, security, and real stats — for humans and agents",
+    title: "v1.run - npm for agents",
+    description: "MCP-first npm registry. Security signals and package health in sub-100ms, globally.",
   },
 };
 
