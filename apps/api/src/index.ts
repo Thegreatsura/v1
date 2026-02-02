@@ -46,6 +46,7 @@ import { auth } from "./lib/auth";
 import { db } from "./lib/db";
 import { favorite, user as userTable } from "./lib/auth-schema";
 import { eq, and } from "drizzle-orm";
+import { createId } from "@paralleldrive/cuid2";
 
 const app = new Hono();
 const PORT = process.env.PORT || 3001;
@@ -144,11 +145,14 @@ app.post("/api/favorites/:name", async (c) => {
   }
   const packageName = decodeURIComponent(c.req.param("name"));
   try {
-    await db.insert(favorite).values({
-      id: crypto.randomUUID(),
-      userId: user.id,
-      packageName,
-    }).onConflictDoNothing();
+    await db
+      .insert(favorite)
+      .values({
+        id: createId(),
+        userId: user.id,
+        packageName,
+      })
+      .onConflictDoNothing();
     return c.json({ success: true, packageName });
   } catch (error) {
     console.error("[Favorites] Error adding:", error);
