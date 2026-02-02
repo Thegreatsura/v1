@@ -18,10 +18,20 @@ export interface NpmChange {
 export async function* streamChanges(since = "now"): AsyncGenerator<NpmChange> {
   const url = `${config.npm.replicateUrl}/_changes?since=${since}&feed=continuous&include_docs=false&heartbeat=30000`;
 
+  console.log(`Connecting to: ${url}`);
+
   const response = await fetch(url);
-  if (!response.ok || !response.body) {
-    throw new Error(`Failed to connect to changes feed: ${response.status}`);
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(`Failed to connect to changes feed: HTTP ${response.status} - ${text.slice(0, 200)}`);
   }
+
+  if (!response.body) {
+    throw new Error("Changes feed response has no body (streaming not supported?)");
+  }
+
+  console.log("Connected to npm changes feed");
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
