@@ -39,11 +39,11 @@ export const auth = db
 
       // Session and cookie configuration
       session: {
-        expiresIn: 60 * 60 * 24 * 7, // 7 days (default session duration)
-        updateAge: 60 * 60 * 24, // Refresh session expiration after 1 day of activity
+        expiresIn: 60 * 60 * 24 * 90, // 90 days (3 months - long-lived sessions)
+        updateAge: 60 * 60 * 24 * 7, // Refresh session expiration after 7 days of activity
         cookieCache: {
           enabled: true,
-          maxAge: 60 * 60, // 1 hour (cookie cache duration)
+          maxAge: 60 * 60 * 24, // 24 hours (cookie cache duration)
         },
       },
 
