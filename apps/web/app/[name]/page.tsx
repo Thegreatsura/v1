@@ -33,16 +33,23 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   // Create SEO-optimized title (aim for 50-60 chars)
   // Format: "package - brief description | v1.run"
-  const briefDesc = pkg.description
-    ? pkg.description
-        .split(/[.!?]/)[0]
-        .trim()
-        .slice(0, 40) // First sentence, max 40 chars
-    : "npm package";
-  const title =
-    pkg.name.length + briefDesc.length < 50
-      ? `${pkg.name} - ${briefDesc} | v1.run`
-      : `${pkg.name} | v1.run`;
+  const maxTitleLength = 60;
+  const suffix = " | v1.run"; // 9 chars
+  const separator = " - "; // 3 chars
+  const availableForDesc = maxTitleLength - pkg.name.length - suffix.length - separator.length;
+
+  let title: string;
+  if (pkg.description && availableForDesc > 15) {
+    // Get first sentence or clause
+    const firstPart = pkg.description.split(/[.!?,;]/)[0].trim();
+    const briefDesc =
+      firstPart.length <= availableForDesc
+        ? firstPart
+        : firstPart.slice(0, availableForDesc - 3).trim() + "...";
+    title = `${pkg.name}${separator}${briefDesc}${suffix}`;
+  } else {
+    title = `${pkg.name}${suffix}`;
+  }
   const description =
     pkg.description || `${pkg.name} npm package - install, documentation, and version info`;
 
