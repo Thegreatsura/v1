@@ -125,8 +125,13 @@ export async function fetchPackageHealth(name: string): Promise<PackageHealthRes
       return null;
     }
 
-    const res = await fetch(`${API_URL}/api/package/${encodeURIComponent(name)}`, {
-      next: { revalidate: 86400 }, // Cache for 24 hours (on-demand invalidation handles updates)
+    // Use absolute URL and bypass Next.js caching to ensure external API call
+    const url = `${API_URL}/api/package/${encodeURIComponent(name)}`;
+    const res = await fetch(url, {
+      cache: "no-store", // Bypass Next.js fetch cache to ensure external API call
+      headers: {
+        Accept: "application/json",
+      },
     });
 
     if (!res.ok) {

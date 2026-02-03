@@ -142,34 +142,31 @@ function healthToPackageData(health: PackageHealthResponse): PackageData {
  */
 async function getPackageFromNpm(name: string): Promise<PackageData | null> {
   try {
-    // Fetch package metadata from npm
-    // Note: Large packages (>2MB) can't be cached by Next.js, which is fine
-    const response = await fetch(`https://registry.npmjs.org/${encodeURIComponent(name)}`, {
-      headers: {
-        Accept: "application/json",
+    // Fetch only the latest version endpoint to avoid huge packuments
+    // This endpoint only returns the latest version metadata, not all versions
+    const latestResponse = await fetch(
+      `https://registry.npmjs.org/${encodeURIComponent(name)}/latest`,
+      {
+        headers: {
+          Accept: "application/json",
+        },
+        cache: "no-store",
       },
-      // Disable caching for large packages to avoid errors
-      // The API layer handles caching instead
-      cache: "no-store",
-    });
+    );
 
-    if (!response.ok) {
-      if (response.status === 404) {
+    if (!latestResponse.ok) {
+      if (latestResponse.status === 404) {
         return null;
       }
-      throw new Error(`npm registry returned ${response.status}`);
+      throw new Error(`npm registry returned ${latestResponse.status}`);
     }
 
-    const data = await response.json();
-    const latestVersion = data["dist-tags"]?.latest;
-    if (!latestVersion) {
-      return null;
-    }
+    const versionData = await latestResponse.json();
+    const latestVersion = versionData.version;
 
-    const versionData = data.versions?.[latestVersion];
-    if (!versionData) {
-      return null;
-    }
+    // For packages that need additional metadata (readme, maintainers, timestamps),
+    // we'll use what's available in the version data or skip it
+    // This avoids fetching the massive full packument
 
     // Fetch weekly downloads
     let downloads = 0;
@@ -202,6 +199,7 @@ async function getPackageFromNpm(name: string): Promise<PackageData | null> {
     // Detect module type
     const isESM = versionData.type === "module" || !!versionData.module || !!versionData.exports;
     const isCJS = versionData.type === "commonjs" || (!versionData.type && !!versionData.main);
+    const nodeVersion = versionData.engines?.node;
 
     // Detect TypeScript
     const hasTypes =
@@ -220,28 +218,48 @@ async function getPackageFromNpm(name: string): Promise<PackageData | null> {
       }
     }
 
-    // Parse maintainers
-    const maintainers = (versionData.maintainers || data.maintainers || [])
+    // Parse maintainers (from version data if available)
+    const maintainers = (versionData.maintainers || [])
       .map((m: { name?: string; email?: string } | string) => (typeof m === "string" ? m : m.name))
       .filter(Boolean) as string[];
 
-    // Get timestamps
-    const timeData = data.time || {};
-    const created = timeData.created ? new Date(timeData.created).getTime() : 0;
-    const updated = timeData[latestVersion] ? new Date(timeData[latestVersion]).getTime() : 0;
+    // Get timestamps (use version publish time if available)
+    const created = versionData.time ? new Date(versionData.time).getTime() : 0;
+    const updated = versionData.time ? new Date(versionData.time).getTime() : 0;
 
-    // Render README HTML
-    const readmeHtml = data.readme
-      ? await renderReadme(data.readme, versionData.name || name, repository)
+    // Fetch README - try version data first, then jsdelivr CDN
+    let readmeContent: string | undefined = versionData.readme;
+
+    if (!readmeContent) {
+      // Fallback to jsdelivr CDN (serves files from npm tarball)
+      try {
+        const readmeFilenames = ["README.md", "readme.md", "Readme.md", "README", "readme"];
+        for (const filename of readmeFilenames) {
+          const readmeResponse = await fetch(
+            `https://cdn.jsdelivr.net/npm/${encodeURIComponent(name)}@${latestVersion}/${filename}`,
+            { cache: "no-store" },
+          );
+          if (readmeResponse.ok) {
+            readmeContent = await readmeResponse.text();
+            break;
+          }
+        }
+      } catch {
+        // Ignore readme fetch errors
+      }
+    }
+
+    const readmeHtml = readmeContent
+      ? await renderReadme(readmeContent, versionData.name || name, repository)
       : undefined;
 
     // Check for install scripts (security concern)
     const scripts = versionData.scripts || {};
     const hasInstallScripts = Boolean(scripts.preinstall || scripts.install || scripts.postinstall);
 
-    // Extract funding URL
+    // Extract funding URL (from version data)
     let funding: string | undefined;
-    const fundingData = versionData.funding || data.funding;
+    const fundingData = versionData.funding;
     if (fundingData) {
       if (typeof fundingData === "string") {
         funding = fundingData;
@@ -251,6 +269,12 @@ async function getPackageFromNpm(name: string): Promise<PackageData | null> {
         funding = (fundingData as { url: string }).url;
       }
     }
+
+    // Note: The API endpoint handles all enrichment (stars, health, security, etc.)
+    // This fallback only provides basic package data when API is unavailable
+
+    const dependencyCount = Object.keys(versionData.dependencies || {}).length;
+    const unpackedSize = versionData.dist?.unpackedSize;
 
     return {
       name: versionData.name || name,
@@ -269,7 +293,7 @@ async function getPackageFromNpm(name: string): Promise<PackageData | null> {
       deprecated: !!versionData.deprecated,
       deprecatedMessage:
         typeof versionData.deprecated === "string" ? versionData.deprecated : undefined,
-      dependencyCount: Object.keys(versionData.dependencies || {}).length,
+      dependencyCount,
       dependencies: versionData.dependencies,
       peerDependencies: versionData.peerDependencies,
       downloads,
