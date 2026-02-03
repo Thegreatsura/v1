@@ -150,36 +150,38 @@ export function InstallTabs({ packageName, hasTypes }: InstallTabsProps) {
               cmd.muted ? "bg-background" : "bg-surface"
             }`}
           >
-            <code className="text-sm">
-              <span className="text-faint select-none">$ </span>
-              {cmd.combined ? (
-                // Combined command display
-                <>
-                  <span className="text-muted">{cmd.command}</span>{" "}
-                  <span className="text-muted">{cmd.subcommand}</span>{" "}
-                  <span className="text-foreground font-bold">{cmd.package}</span>
-                  <span className="text-subtle"> {cmd.separator} </span>
-                  <span className="text-muted">{cmd.command2}</span>{" "}
-                  <span className="text-muted">{cmd.subcommand2}</span>{" "}
-                  {cmd.flags2 && <span className="text-subtle">{cmd.flags2} </span>}
-                  <span className="text-foreground font-bold">{cmd.package2}</span>
-                </>
-              ) : (
-                // Regular command display
-                <>
-                  <span className={cmd.muted ? "text-subtle" : "text-muted"}>{cmd.command}</span>{" "}
-                  {cmd.subcommand && (
-                    <span className={cmd.muted ? "text-subtle" : "text-muted"}>
-                      {cmd.subcommand}
-                    </span>
-                  )}{" "}
-                  {cmd.flags && <span className="text-subtle">{cmd.flags} </span>}
-                  <span className="text-foreground font-bold">{cmd.package}</span>
-                </>
-              )}
-            </code>
+            <div className="flex-1 min-w-0 overflow-x-auto">
+              <code className="text-sm whitespace-nowrap">
+                <span className="text-faint select-none">$ </span>
+                {cmd.combined ? (
+                  // Combined command display
+                  <>
+                    <span className="text-muted">{cmd.command}</span>{" "}
+                    <span className="text-muted">{cmd.subcommand}</span>{" "}
+                    <span className="text-foreground font-bold">{cmd.package}</span>
+                    <span className="text-subtle"> {cmd.separator} </span>
+                    <span className="text-muted">{cmd.command2}</span>{" "}
+                    <span className="text-muted">{cmd.subcommand2}</span>{" "}
+                    {cmd.flags2 && <span className="text-subtle">{cmd.flags2} </span>}
+                    <span className="text-foreground font-bold">{cmd.package2}</span>
+                  </>
+                ) : (
+                  // Regular command display
+                  <>
+                    <span className={cmd.muted ? "text-subtle" : "text-muted"}>{cmd.command}</span>{" "}
+                    {cmd.subcommand && (
+                      <span className={cmd.muted ? "text-subtle" : "text-muted"}>
+                        {cmd.subcommand}
+                      </span>
+                    )}{" "}
+                    {cmd.flags && <span className="text-subtle">{cmd.flags} </span>}
+                    <span className="text-foreground font-bold">{cmd.package}</span>
+                  </>
+                )}
+              </code>
+            </div>
             <span
-              className={`text-xs uppercase tracking-wider transition-colors ${
+              className={`text-xs uppercase tracking-wider transition-colors shrink-0 ml-2 ${
                 copied === cmd.full ? "text-foreground" : "text-faint group-hover:text-muted"
               }`}
             >

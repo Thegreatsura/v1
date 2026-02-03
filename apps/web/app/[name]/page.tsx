@@ -184,7 +184,7 @@ export default async function PackagePage({ params }: PageProps) {
         {/* Stats Bar */}
         <div className="border-b border-border">
           <div className="container-page">
-            <div className="flex flex-wrap divide-x divide-border -mx-4">
+            <div className="flex flex-wrap gap-y-2 -mx-4">
               <StatCell label="license" value={pkg.license || "—"} />
               <StatCell label="deps" value={String(pkg.dependencyCount)} />
               {pkg.unpackedSize && <StatCell label="size" value={formatBytes(pkg.unpackedSize)} />}
@@ -484,7 +484,7 @@ export default async function PackagePage({ params }: PageProps) {
 
 function StatCell({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex-1 min-w-[100px] px-4 py-3">
+    <div className="flex-1 min-w-[80px] sm:min-w-[100px] px-4 py-3">
       <div className="text-[10px] uppercase tracking-widest text-subtle">{label}</div>
       <div className="text-sm text-foreground font-medium tabular-nums">{value}</div>
     </div>
@@ -493,7 +493,7 @@ function StatCell({ label, value }: { label: string; value: React.ReactNode }) {
 
 function VulnStatCellFromHealth({ vulns }: { vulns: number }) {
   return (
-    <div className="flex-1 min-w-[100px] px-4 py-3">
+    <div className="flex-1 min-w-[80px] sm:min-w-[100px] px-4 py-3">
       <div className="text-[10px] uppercase tracking-widest text-subtle">vulns</div>
       <div
         className={`text-sm font-medium tabular-nums ${vulns > 0 ? "text-red-400" : "text-foreground"}`}
@@ -506,7 +506,7 @@ function VulnStatCellFromHealth({ vulns }: { vulns: number }) {
 
 function HealthScoreCell({ score, grade }: { score: number; grade: string }) {
   return (
-    <div className="flex-1 min-w-[100px] px-4 py-3">
+    <div className="flex-1 min-w-[80px] sm:min-w-[100px] px-4 py-3">
       <div className="text-[10px] uppercase tracking-widest text-subtle">health</div>
       <div className="text-sm font-medium" style={{ color: getGradeColor(grade) }}>
         {grade} ({score})
@@ -550,7 +550,7 @@ async function VulnStatCell({ packageName, version }: { packageName: string; ver
     const count = data.vulns?.length || 0;
 
     return (
-      <div className="flex-1 min-w-[100px] px-4 py-3">
+      <div className="flex-1 min-w-[80px] sm:min-w-[100px] px-4 py-3">
         <div className="text-[10px] uppercase tracking-widest text-subtle">vulns</div>
         <div className="text-sm font-medium tabular-nums text-foreground">{count}</div>
       </div>

@@ -106,7 +106,7 @@ export default function UpdatesPage() {
               [v1.run]
             </Link>
 
-            <div className="flex items-center gap-6 text-xs">
+            <div className="flex items-center gap-3 sm:gap-6 text-xs flex-wrap">
               <span>PKG/MIN: {stats.packagesPerMinute}</span>
               <span>TOTAL: {stats.totalSession}</span>
               <span className={connected ? "blink" : ""}>
@@ -214,11 +214,17 @@ export default function UpdatesPage() {
         .crt-content {
           position: relative;
           z-index: 10;
-          padding: 20px 40px;
+          padding: 16px;
           height: 100vh;
           display: flex;
           flex-direction: column;
           text-shadow: 0 0 2px rgba(255, 255, 255, 0.5);
+        }
+
+        @media (min-width: 640px) {
+          .crt-content {
+            padding: 20px 40px;
+          }
         }
 
         .crt-header {
@@ -285,6 +291,13 @@ export default function UpdatesPage() {
           overflow: hidden;
           text-overflow: ellipsis;
           padding: 2px 0;
+        }
+
+        @media (max-width: 640px) {
+          .terminal-line {
+            white-space: normal;
+            word-break: break-word;
+          }
         }
 
         .terminal-line.waiting {

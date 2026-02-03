@@ -50,7 +50,7 @@ export function Footer() {
     <footer className="border-t border-border pt-16 md:pt-24">
       {/* Main Footer Content */}
       <div className="container-page py-12 md:py-16">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 md:gap-12">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8 md:gap-12">
           {/* Logo Column */}
           <div className="col-span-2 sm:col-span-1">
             <Link href="/" className="inline-block hover:opacity-80 transition-opacity">

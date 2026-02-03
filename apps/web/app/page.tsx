@@ -155,7 +155,7 @@ export default function Home() {
       <div className="screen-flicker" />
 
       {/* User profile - top right */}
-      <div className="absolute top-4 right-4 z-20">
+      <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20">
         <UserProfile />
       </div>
 
@@ -182,7 +182,7 @@ export default function Home() {
           </div>
 
           {/* Command prompt with instant search */}
-          <div className="w-full max-w-xl relative" ref={containerRef}>
+          <div className="w-full max-w-xl relative px-4 sm:px-0" ref={containerRef}>
             <form onSubmit={handleSubmit}>
               <div className="flex items-center text-sm border border-border px-4 py-3">
                 <span className="text-muted">$</span>
@@ -213,7 +213,7 @@ export default function Home() {
             {isOpen && query.trim() && (
               <div
                 ref={resultsRef}
-                className="absolute top-full left-0 right-0 mt-1 border border-border bg-background/95 z-20 max-h-[280px] overflow-y-auto backdrop-blur-sm"
+                className="absolute top-full left-0 right-0 mt-1 border border-border bg-background/95 z-20 max-h-[50vh] sm:max-h-[280px] overflow-y-auto backdrop-blur-sm"
               >
                 {results.length > 0 ? (
                   results.map((result, index) => (
@@ -272,7 +272,7 @@ export default function Home() {
           </div>
 
           {/* Featured packages */}
-          <div className="text-xs mt-6">
+          <div className="text-xs mt-6 px-4 text-center">
             {["next", "react", "drizzle-orm", "hono", "tailwindcss", "typescript", "vite"].map(
               (pkg, i, arr) => (
                 <span key={pkg}>

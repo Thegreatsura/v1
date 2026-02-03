@@ -87,7 +87,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen p-8 max-w-2xl mx-auto">
+    <div className="min-h-screen p-4 sm:p-8 max-w-2xl mx-auto">
       <Link href="/" className="text-xs text-subtle hover:text-foreground transition-colors">
         ← Back
       </Link>
