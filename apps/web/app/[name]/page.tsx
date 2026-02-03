@@ -197,7 +197,7 @@ export default async function PackagePage({ params }: PageProps) {
               )}
               <StatCell label="downloads" value={`${formatNumber(pkg.downloads)}/wk`} />
               {pkg.stars !== undefined && pkg.stars > 0 && (
-                <StatCell label="stars" value={formatNumber(pkg.stars)} />
+                <StarsStatCell stars={pkg.stars} repository={pkg.repository} />
               )}
               {pkg.health && (
                 <HealthScoreCell score={pkg.health.health.score} grade={pkg.health.health.grade} />
@@ -513,6 +513,30 @@ function HealthScoreCell({ score, grade }: { score: number; grade: string }) {
       </div>
     </div>
   );
+}
+
+function StarsStatCell({ stars, repository }: { stars: number; repository?: string }) {
+  const content = (
+    <>
+      <div className="text-[10px] uppercase tracking-widest text-subtle">stars</div>
+      <div className="text-sm text-foreground font-medium tabular-nums">{formatNumber(stars)}</div>
+    </>
+  );
+
+  if (repository) {
+    return (
+      <Link
+        href={repository}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex-1 min-w-[80px] sm:min-w-[100px] px-4 py-3 hover:bg-surface transition-colors"
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return <div className="flex-1 min-w-[80px] sm:min-w-[100px] px-4 py-3">{content}</div>;
 }
 
 function getGradeColor(grade: string): string {

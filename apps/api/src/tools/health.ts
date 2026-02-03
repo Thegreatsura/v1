@@ -301,10 +301,12 @@ function buildPackageData(
 
   // Get timestamps
   const created = npm.time?.created ? new Date(npm.time.created).getTime() : Date.now();
-  const updated = npm.time?.[version]
-    ? new Date(npm.time[version] as string).getTime()
-    : npm.time?.modified
-      ? new Date(npm.time.modified).getTime()
+  // Use 'modified' (last activity on any version) rather than version-specific time
+  // This ensures we show when the package was truly last updated, not just when the latest tag was set
+  const updated = npm.time?.modified
+    ? new Date(npm.time.modified).getTime()
+    : npm.time?.[version]
+      ? new Date(npm.time[version] as string).getTime()
       : Date.now();
 
   // Parse maintainers
