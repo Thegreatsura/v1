@@ -287,16 +287,17 @@ function CommandSearch({ open, setOpen }: CommandSearchProps) {
   );
 }
 
-// Trigger button for the header
+// Trigger button for the header - Raycast-style pill
 export function SearchTrigger({ className }: { className?: string }) {
   const { setOpen } = useCommandSearch();
 
   return (
     <button
       onClick={() => setOpen(true)}
-      className={`text-xs text-subtle hover:text-muted transition-colors ${className}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-1 text-faint hover:text-muted rounded transition-colors ${className}`}
     >
-      /search
+      <span className="text-base">⌘</span>
+      <span className="text-xs">K</span>
     </button>
   );
 }
