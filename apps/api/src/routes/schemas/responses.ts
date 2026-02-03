@@ -226,7 +226,7 @@ export const PackageHealthResponseSchema = z
         total: z.number(),
         critical: z.number(),
         high: z.number(),
-        medium: z.number(),
+        moderate: z.number(),
         low: z.number(),
       }),
       supplyChain: z.object({
@@ -277,7 +277,7 @@ export const PackageHealthResponseSchema = z
     popularity: z.object({
       weeklyDownloads: z.number(),
       downloadTrend: z.string().optional(),
-      dependents: z.number().optional(),
+      percentChange: z.number().optional(),
       stars: z.number().optional(),
     }),
 

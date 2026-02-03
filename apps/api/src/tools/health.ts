@@ -2,9 +2,12 @@
  * Package Health Tool
  *
  * Comprehensive package assessment - one call returns everything an AI needs.
- * Falls back to npm registry if package not in Typesense, then queues for sync.
+ * Always fetches live data from authoritative sources (npm, GitHub).
+ * Typesense is only used for search/alternatives, not as data source.
+ * Caching is handled by Cloudflare edge + in-memory LRU for external API calls.
  */
 
+import { inferCategory } from "@v1/decisions";
 import {
   fetchGitHubDataForPackage,
   fetchGitHubReadme,
@@ -12,9 +15,14 @@ import {
   type GitHubData,
 } from "../lib/clients/github";
 import {
+  checkTypesPackage,
   fetchReadmeFromCdn,
+  getAuthorName,
+  getDeprecationMessage,
   getLatestVersion,
   getPackage as getNpmPackage,
+  getRepositoryUrl,
+  getVersionData,
   hasTypes as npmHasTypes,
   isCJS as npmIsCJS,
   isDeprecated as npmIsDeprecated,
@@ -22,16 +30,14 @@ import {
   type PackageMetadata,
 } from "../lib/clients/npm";
 import { fetchNpmsScores, type NpmsScores } from "../lib/clients/npms";
-import {
-  findAlternativesByCategory,
-  getPackage,
-  type PackageDocument,
-} from "../lib/clients/typesense";
+import { fetchVulnerabilities } from "../lib/clients/osv";
+import { findAlternativesByCategory, type PackageDocument } from "../lib/clients/typesense";
 import {
   type DownloadTrend,
   getDownloadTrend,
   getPackageDetails,
   getSecuritySignals,
+  getWeeklyDownloads,
   type PackageDetails,
   type SecuritySignals,
 } from "../lib/enrichment";
@@ -41,7 +47,6 @@ import {
   type HealthAssessment,
 } from "../lib/health-score";
 import { queuePackageSync } from "../lib/queue";
-import { CacheKey, cache, TTL } from "../lib/cache";
 import { formatReplacement, type ReplacementInfo } from "../lib/replacements";
 
 /**
@@ -61,7 +66,7 @@ export interface PackageHealthResponse {
       total: number;
       critical: number;
       high: number;
-      medium: number;
+      moderate: number;
       low: number;
     };
     supplyChain: {
@@ -107,7 +112,7 @@ export interface PackageHealthResponse {
   popularity: {
     weeklyDownloads: number;
     downloadTrend?: string;
-    dependents?: number;
+    percentChange?: number;
     stars?: number;
   };
 
@@ -155,78 +160,111 @@ export interface PackageHealthResponse {
 }
 
 /**
+ * Internal package data structure (built from npm registry)
+ */
+interface PackageData {
+  name: string;
+  version: string;
+  description?: string;
+  keywords?: string[];
+  author?: string;
+  authorGithub?: string;
+  license?: string;
+  licenseType?: string;
+  homepage?: string;
+  repository?: string;
+  updated: number;
+  created: number;
+  downloads: number;
+  hasTypes: boolean;
+  typesPackage?: string;
+  isESM: boolean;
+  isCJS: boolean;
+  moduleFormat?: string;
+  dependencies: number;
+  maintainers: string[];
+  nodeVersion?: string;
+  deprecated: boolean;
+  deprecatedMessage?: string;
+  unpackedSize?: number;
+  hasProvenance: boolean;
+  hasInstallScripts: boolean;
+  isStable: boolean;
+  hasBin: boolean;
+  binCommands?: string[];
+  category?: string;
+  vulnerabilities: { total: number; critical: number; high: number; moderate: number; low: number };
+}
+
+/**
  * Get comprehensive package health
  *
- * Note: We don't cache the full health response in LRU because:
- * 1. Cloudflare handles edge caching
- * 2. Adding new fields would require cache invalidation
- * 3. Intermediate data (GitHub, npms) is still cached to reduce external API calls
+ * Always fetches from npm registry (source of truth).
+ * Cloudflare handles edge caching, internal LRU caches external API responses.
  */
 export async function getPackageHealth(name: string): Promise<PackageHealthResponse | null> {
+  // 1. Fetch from npm registry (authoritative source)
+  const npmPkg = await getNpmPackage(name);
+  if (!npmPkg) return null;
 
-  // 2. Get core data from Typesense
-  let pkg = await getPackage(name);
-  let fromNpm = false;
-  let readme: string | undefined;
+  // Queue for Typesense indexing (async, for search only)
+  queuePackageSync(name).catch((err) =>
+    console.error(`[Health] Failed to queue ${name} for sync:`, err),
+  );
 
-  // 3. If not in Typesense, fallback to npm registry
-  if (!pkg) {
-    const npmPkg = await getNpmPackage(name);
-    if (!npmPkg) return null;
+  // 2. Extract basic data from npm
+  const version = getLatestVersion(npmPkg);
+  const versionData = getVersionData(npmPkg);
+  const repository = getRepositoryUrl(npmPkg);
 
-    // Queue for sync to Typesense (async, don't await)
-    queuePackageSync(name).catch((err) =>
-      console.error(`[Health] Failed to queue ${name} for sync:`, err),
-    );
+  // 3. Fetch all enrichment data in parallel
+  const [scores, details, security, trend, downloads, github, typesPackage, vulns] =
+    await Promise.all([
+      fetchNpmsScores(name),
+      getPackageDetails(name),
+      getSecuritySignals(name),
+      getDownloadTrend(name),
+      getWeeklyDownloads(name),
+      repository ? fetchGitHubDataForPackage(name, repository) : null,
+      npmHasTypes(npmPkg) ? null : checkTypesPackage(name),
+      fetchVulnerabilities(name, version),
+    ]);
 
-    // Convert npm data to PackageDocument format
-    pkg = npmToPackageDocument(npmPkg);
-    readme = npmPkg.readme;
-    fromNpm = true;
-  } else {
-    // Fetch readme from npm for packages in Typesense
-    const npmPkg = await getNpmPackage(name);
-    readme = npmPkg?.readme;
-  }
+  // 4. Build package data from npm + enrichment
+  const pkg = buildPackageData(npmPkg, version, versionData, {
+    downloads,
+    typesPackage: typesPackage || undefined,
+    details,
+    vulns,
+    repository,
+  });
 
-  // 4. Fetch enriched data in parallel
-  const [scores, details, security, trend, github] = await Promise.all([
-    fetchNpmsScores(name),
-    getPackageDetails(name),
-    getSecuritySignals(name),
-    getDownloadTrend(name),
-    pkg.repository ? fetchGitHubDataForPackage(name, pkg.repository) : null,
-  ]);
-
-  // 4b. Fetch README if npm packument doesn't have one
-  // Priority: 1) npm packument, 2) jsdelivr CDN (tarball), 3) GitHub
+  // 5. Fetch README
+  let readme = npmPkg.readme;
   if (!readme) {
-    // Try jsdelivr CDN first (serves files from npm tarball)
-    readme = (await fetchReadmeFromCdn(name, pkg.version)) || undefined;
-
-    // Fallback to GitHub if still no readme
-    if (!readme && pkg.repository) {
-      const parsed = parseGitHubUrl(pkg.repository);
+    readme = (await fetchReadmeFromCdn(name, version)) || undefined;
+    if (!readme && repository) {
+      const parsed = parseGitHubUrl(repository);
       if (parsed) {
         readme = (await fetchGitHubReadme(parsed.owner, parsed.repo)) || undefined;
       }
     }
   }
 
-  // 5. Get alternatives by category (skip if from npm - no category data)
+  // 6. Get alternatives from Typesense (search index only)
   let alternatives: PackageDocument[] = [];
-  if (pkg.inferredCategory && !fromNpm) {
-    alternatives = await findAlternativesByCategory(pkg.inferredCategory, name, 5);
+  if (pkg.category) {
+    alternatives = await findAlternativesByCategory(pkg.category, name, 5);
   }
 
-  // 6. Check for replacements (instant O(1) lookup)
+  // 7. Check for known replacements
   const replacement = formatReplacement(name);
 
-  // 7. Compute health assessment
-  const health = computeHealthAssessment(pkg, scores, security, trend);
+  // 8. Compute health score
+  const health = computeHealthScore(pkg, scores, security, trend);
 
-  // 8. Build response
-  const response = buildHealthResponse(
+  // 9. Build response
+  return buildHealthResponse(
     pkg,
     health,
     scores,
@@ -238,94 +276,179 @@ export async function getPackageHealth(name: string): Promise<PackageHealthRespo
     replacement,
     readme,
   );
-
-  return response;
 }
 
 /**
- * Convert npm PackageMetadata to PackageDocument format
+ * Build package data from npm registry response
  */
-function npmToPackageDocument(npm: PackageMetadata): PackageDocument {
-  const latestVersion = getLatestVersion(npm);
-  const versionData = npm.versions?.[latestVersion];
-
-  // Parse repository URL
-  let repository: string | undefined;
-  if (typeof npm.repository === "string") {
-    repository = npm.repository;
-  } else if (npm.repository?.url) {
-    repository = npm.repository.url
-      .replace(/^git\+/, "")
-      .replace(/\.git$/, "")
-      .replace(/^git:\/\//, "https://")
-      .replace(/^ssh:\/\/git@/, "https://");
-  }
+function buildPackageData(
+  npm: PackageMetadata,
+  version: string,
+  versionData: ReturnType<typeof getVersionData>,
+  enrichment: {
+    downloads: number;
+    typesPackage: string | undefined;
+    details: PackageDetails | null;
+    vulns: { total: number; critical: number; high: number; moderate: number; low: number } | null;
+    repository: string | null;
+  },
+): PackageData {
+  const { downloads, typesPackage, details, vulns } = enrichment;
+  const repository = enrichment.repository || undefined;
 
   // Parse author
-  let author: string | undefined;
-  if (typeof npm.author === "string") {
-    author = npm.author;
-  } else if (npm.author?.name) {
-    author = npm.author.name;
-  }
+  const author = getAuthorName(npm);
 
   // Get timestamps
   const created = npm.time?.created ? new Date(npm.time.created).getTime() : Date.now();
-  const updated = npm.time?.[latestVersion]
-    ? new Date(npm.time[latestVersion] as string).getTime()
-    : Date.now();
+  const updated = npm.time?.[version]
+    ? new Date(npm.time[version] as string).getTime()
+    : npm.time?.modified
+      ? new Date(npm.time.modified).getTime()
+      : Date.now();
 
   // Parse maintainers
   const maintainers = (npm.maintainers || [])
     .map((m) => m.name)
     .filter((n): n is string => Boolean(n));
 
+  // Determine module format
+  const isESM = npmIsESM(npm);
+  const isCJS = npmIsCJS(npm);
+  const moduleFormat = isESM && isCJS ? "dual" : isESM ? "esm" : isCJS ? "cjs" : "unknown";
+
+  // Check install scripts
+  const scripts = versionData?.scripts || {};
+  const hasInstallScripts = Boolean(scripts.preinstall || scripts.install || scripts.postinstall);
+
+  // Check provenance
+  const hasProvenance = Boolean(versionData?.dist?.attestations);
+
+  // Check if stable (>= 1.0.0)
+  const majorVersion = parseInt(version.split(".")[0] || "0", 10);
+  const isStable = majorVersion >= 1;
+
+  // Check bin commands
+  const bin = versionData?.bin;
+  const hasBin = Boolean(bin && Object.keys(bin).length > 0);
+  const binCommands = bin ? Object.keys(bin) : [];
+
+  // Classify license
+  const license = npm.license;
+  const licenseType = classifyLicense(license);
+
+  // Infer category from keywords
+  const category = npm.keywords ? inferCategory(npm.keywords) : null;
+
+  // Extract GitHub username from repository
+  const authorGithub = repository ? extractGithubUsername(repository) : undefined;
+
   return {
-    id: npm.name,
     name: npm.name,
+    version,
     description: npm.description,
-    version: latestVersion,
-    license: npm.license,
-    homepage: npm.homepage,
-    repository,
-    author,
     keywords: npm.keywords,
-    downloads: 0, // Will be fetched via enrichment
+    author: author || undefined,
+    authorGithub,
+    license,
+    licenseType,
+    homepage: npm.homepage,
+    repository: repository || undefined,
     updated,
     created,
+    downloads,
     hasTypes: npmHasTypes(npm),
-    isESM: npmIsESM(npm),
-    isCJS: npmIsCJS(npm),
+    typesPackage,
+    isESM,
+    isCJS,
+    moduleFormat,
     dependencies: Object.keys(versionData?.dependencies || {}).length,
     maintainers,
     nodeVersion: versionData?.engines?.node,
     deprecated: npmIsDeprecated(npm),
-    deprecatedMessage:
-      typeof npm.deprecated === "string"
-        ? npm.deprecated
-        : typeof versionData?.deprecated === "string"
-          ? versionData.deprecated
-          : undefined,
+    deprecatedMessage: getDeprecationMessage(npm) || undefined,
     unpackedSize: versionData?.dist?.unpackedSize,
-    // These fields won't be available from npm (only from Typesense after sync)
-    inferredCategory: undefined,
-    moduleFormat: npmIsESM(npm)
-      ? npmIsCJS(npm)
-        ? "dual"
-        : "esm"
-      : npmIsCJS(npm)
-        ? "cjs"
-        : "unknown",
-    hasBin: undefined,
-    licenseType: undefined,
-    hasProvenance: undefined,
-    isStable: undefined,
-    authorGithub: undefined,
+    hasProvenance,
+    hasInstallScripts,
+    isStable,
+    hasBin,
+    binCommands,
+    category: category || undefined,
+    vulnerabilities: vulns || { total: 0, critical: 0, high: 0, moderate: 0, low: 0 },
   };
 }
 
+/**
+ * Classify license type
+ */
+function classifyLicense(license: string | undefined): string {
+  if (!license) return "unknown";
+  const upper = license.toUpperCase();
+  if (/^(MIT|ISC|BSD|APACHE|UNLICENSE|CC0|WTFPL|0BSD)/i.test(upper)) return "permissive";
+  if (/^(GPL|LGPL|AGPL|MPL|EPL|EUPL|CDDL)/i.test(upper)) return "copyleft";
+  if (/^(PROPRIETARY|COMMERCIAL|SEE LICENSE|UNLICENSED)/i.test(upper)) return "proprietary";
+  return "unknown";
+}
+
+/**
+ * Extract GitHub username from repository URL
+ */
+function extractGithubUsername(repoUrl: string): string | undefined {
+  const match = repoUrl.match(/github\.com\/([a-zA-Z0-9_-]+)/);
+  return match ? match[1] : undefined;
+}
+
+/**
+ * Compute health score from package data
+ */
+function computeHealthScore(
+  pkg: PackageData,
+  scores: NpmsScores | null,
+  security: SecuritySignals | null,
+  trend: DownloadTrend | null,
+): HealthAssessment {
+  // Convert to format expected by computeHealthAssessment
+  const pkgDoc: PackageDocument = {
+    id: pkg.name,
+    name: pkg.name,
+    version: pkg.version,
+    description: pkg.description,
+    keywords: pkg.keywords,
+    author: pkg.author,
+    license: pkg.license,
+    homepage: pkg.homepage,
+    repository: pkg.repository,
+    downloads: pkg.downloads,
+    updated: pkg.updated,
+    created: pkg.created,
+    hasTypes: pkg.hasTypes,
+    typesPackage: pkg.typesPackage,
+    isESM: pkg.isESM,
+    isCJS: pkg.isCJS,
+    dependencies: pkg.dependencies,
+    maintainers: pkg.maintainers,
+    nodeVersion: pkg.nodeVersion,
+    deprecated: pkg.deprecated,
+    deprecatedMessage: pkg.deprecatedMessage,
+    vulnerabilities: pkg.vulnerabilities.total,
+    vulnCritical: pkg.vulnerabilities.critical,
+    vulnHigh: pkg.vulnerabilities.high,
+    hasProvenance: pkg.hasProvenance,
+    hasInstallScripts: pkg.hasInstallScripts,
+    isStable: pkg.isStable,
+    licenseType: pkg.licenseType,
+    moduleFormat: pkg.moduleFormat,
+    inferredCategory: pkg.category,
+  };
+
+  return computeHealthAssessment(pkgDoc, scores, security, trend);
+}
+
+/**
+ * Build the final health response
+ */
 function buildHealthResponse(
-  pkg: PackageDocument,
+  pkg: PackageData,
   health: HealthAssessment,
   scores: NpmsScores | null,
   details: PackageDetails | null,
@@ -361,7 +484,7 @@ function buildHealthResponse(
     }
   }
 
-  // Format alternatives
+  // Format alternatives (downloads come from Typesense, may be stale - that's OK for suggestions)
   const formattedAlternatives = alternatives.map((alt) => ({
     name: alt.name,
     downloads: alt.downloads,
@@ -370,8 +493,13 @@ function buildHealthResponse(
   }));
 
   // Generate recommendation
+  const pkgForRec = {
+    name: pkg.name,
+    deprecated: pkg.deprecated,
+    deprecatedMessage: pkg.deprecatedMessage,
+  };
   const recommendation = generateRecommendation(
-    pkg,
+    pkgForRec as PackageDocument,
     health,
     formattedAlternatives,
     replacement || undefined,
@@ -381,25 +509,19 @@ function buildHealthResponse(
     name: pkg.name,
     version: pkg.version,
     description: pkg.description,
-    category: pkg.inferredCategory,
+    category: pkg.category,
     readme,
 
     health,
 
     security: {
-      vulnerabilities: {
-        total: pkg.vulnerabilities || 0,
-        critical: pkg.vulnCritical || 0,
-        high: pkg.vulnHigh || 0,
-        medium: 0,
-        low: 0,
-      },
+      vulnerabilities: pkg.vulnerabilities,
       supplyChain: {
-        hasProvenance: pkg.hasProvenance || false,
-        hasInstallScripts: pkg.hasInstallScripts || false,
+        hasProvenance: pkg.hasProvenance,
+        hasInstallScripts: pkg.hasInstallScripts,
         hasGitDeps: security?.hasGitDeps || false,
         hasHttpDeps: security?.hasHttpDeps || false,
-        maintainersCount: details?.maintainersCount || pkg.maintainers?.length || 0,
+        maintainersCount: details?.maintainersCount || pkg.maintainers.length,
       },
       license: {
         spdx: pkg.license,
@@ -413,16 +535,14 @@ function buildHealthResponse(
       readmeSize: security?.readmeSize || 0,
       hasTests: security?.hasTests || false,
       hasTestScript: security?.hasTestScript || false,
-      isStable: pkg.isStable || false,
+      isStable: pkg.isStable,
       scores: scores || undefined,
     },
 
     compatibility: {
       types: typesStatus,
       typesPackage: pkg.typesPackage,
-      moduleFormat:
-        pkg.moduleFormat ||
-        (pkg.isESM && pkg.isCJS ? "dual" : pkg.isESM ? "esm" : pkg.isCJS ? "cjs" : undefined),
+      moduleFormat: pkg.moduleFormat,
       sideEffects: details?.sideEffects,
       engines: details ? { node: details.engineNode, npm: details.engineNpm } : undefined,
       os: details?.os,
@@ -439,14 +559,14 @@ function buildHealthResponse(
     popularity: {
       weeklyDownloads: pkg.downloads,
       downloadTrend: trend?.trend,
-      dependents: pkg.dependents,
-      stars: pkg.stars || github?.stars,
+      percentChange: trend?.percentChange,
+      stars: github?.stars,
     },
 
     activity: {
       lastUpdated: new Date(pkg.updated).toISOString(),
       lastReleaseAge: daysSinceUpdate,
-      maintainersCount: details?.maintainersCount || pkg.maintainers?.length || 0,
+      maintainersCount: details?.maintainersCount || pkg.maintainers.length,
     },
 
     github: github || undefined,
@@ -466,10 +586,10 @@ function buildHealthResponse(
       : undefined,
 
     cli:
-      pkg.hasBin && details?.binCommands?.length
+      pkg.hasBin && pkg.binCommands?.length
         ? {
             isCLI: true,
-            commands: details.binCommands,
+            commands: pkg.binCommands,
           }
         : undefined,
 

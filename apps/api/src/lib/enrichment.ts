@@ -240,3 +240,39 @@ export async function getDownloadTrend(packageName: string): Promise<DownloadTre
     return null;
   }
 }
+
+/**
+ * Weekly downloads data
+ */
+export interface WeeklyDownloads {
+  downloads: number;
+}
+
+/**
+ * Fetch live weekly downloads from npm API with caching
+ */
+export async function getWeeklyDownloads(packageName: string): Promise<number> {
+  const cacheKey = `pkg:${packageName}:downloads`;
+
+  // Check cache first
+  const cached = cache.get<WeeklyDownloads>(cacheKey);
+  if (cached) return cached.downloads;
+
+  try {
+    const response = await fetch(
+      `https://api.npmjs.org/downloads/point/last-week/${encodeURIComponent(packageName)}`,
+    );
+
+    if (!response.ok) return 0;
+
+    const data = (await response.json()) as { downloads: number };
+    const result: WeeklyDownloads = { downloads: data.downloads };
+
+    // Cache for 6 hours (downloads don't change that frequently)
+    cache.set(cacheKey, result, 6 * 60 * 60);
+
+    return data.downloads;
+  } catch {
+    return 0;
+  }
+}
