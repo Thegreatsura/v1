@@ -31,8 +31,20 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return { title: "Package Not Found" };
   }
 
-  const title = `${pkg.name} — v1.run`;
-  const description = pkg.description || `${pkg.name} npm package`;
+  // Create SEO-optimized title (aim for 50-60 chars)
+  // Format: "package - brief description | v1.run"
+  const briefDesc = pkg.description
+    ? pkg.description
+        .split(/[.!?]/)[0]
+        .trim()
+        .slice(0, 40) // First sentence, max 40 chars
+    : "npm package";
+  const title =
+    pkg.name.length + briefDesc.length < 50
+      ? `${pkg.name} - ${briefDesc} | v1.run`
+      : `${pkg.name} | v1.run`;
+  const description =
+    pkg.description || `${pkg.name} npm package - install, documentation, and version info`;
 
   return {
     title,
