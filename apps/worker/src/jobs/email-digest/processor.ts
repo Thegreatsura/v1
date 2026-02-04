@@ -6,7 +6,7 @@
  */
 
 import { sendEmail, Digest, generateUnsubscribeToken, type DigestUpdate } from "@v1/email";
-import { db } from "../../lib/db";
+import { db } from "@v1/db/client";
 import React from "react";
 
 /**
@@ -88,9 +88,10 @@ async function processUserDigest(
 
   const periodText = period === "daily" ? "Daily" : "Weekly";
   const criticalCount = updates.filter((u) => u.severity === "critical").length;
-  const subject = criticalCount > 0
-    ? `🔒 ${periodText} digest: ${criticalCount} security ${criticalCount === 1 ? "update" : "updates"}`
-    : `📦 ${periodText} digest: ${updates.length} package ${updates.length === 1 ? "update" : "updates"}`;
+  const subject =
+    criticalCount > 0
+      ? `🔒 ${periodText} digest: ${criticalCount} security ${criticalCount === 1 ? "update" : "updates"}`
+      : `📦 ${periodText} digest: ${updates.length} package ${updates.length === 1 ? "update" : "updates"}`;
 
   const result = await sendEmail({
     to: email,
@@ -154,7 +155,9 @@ export async function processDigests(period: "daily" | "weekly"): Promise<{
     }
   }
 
-  console.log(`[Digest] ${period} digest complete: ${sent} sent, ${failed} failed, ${skipped} skipped`);
+  console.log(
+    `[Digest] ${period} digest complete: ${sent} sent, ${failed} failed, ${skipped} skipped`,
+  );
 
   return { sent, failed, skipped };
 }

@@ -47,7 +47,7 @@ export default function MCPPage() {
           <h2 className="text-xs uppercase tracking-widest text-subtle mb-4">Why</h2>
           <div className="space-y-3 text-sm text-muted">
             <p>
-              <span className="text-foreground">Fast</span> — &lt;100ms globally
+              <span className="text-foreground">Fast</span> — &lt;50ms globally
             </p>
             <p>
               <span className="text-foreground">Accurate</span> — Real-time version data, no

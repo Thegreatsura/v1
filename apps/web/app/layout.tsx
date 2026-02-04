@@ -7,8 +7,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://v1.run"),
   title: "v1.run - npm for agents",
-  description:
-    "MCP-first npm registry. Security signals and package health in sub-100ms, globally.",
+  description: "MCP-first npm registry. Security signals and package health in sub-50ms, globally.",
   alternates: {
     canonical: "https://v1.run",
   },
@@ -26,7 +25,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "v1.run - npm for agents",
     description:
-      "MCP-first npm registry. Security signals and package health in sub-100ms, globally.",
+      "MCP-first npm registry. Security signals and package health in sub-50ms, globally.",
     url: "https://v1.run",
     siteName: "v1.run",
     type: "website",
@@ -35,7 +34,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "v1.run - npm for agents",
     description:
-      "MCP-first npm registry. Security signals and package health in sub-100ms, globally.",
+      "MCP-first npm registry. Security signals and package health in sub-50ms, globally.",
   },
 };
 
@@ -45,8 +44,7 @@ const websiteJsonLd = {
   "@type": "WebSite",
   name: "v1.run",
   url: "https://v1.run",
-  description:
-    "MCP-first npm registry. Security signals and package health in sub-100ms, globally.",
+  description: "MCP-first npm registry. Security signals and package health in sub-50ms, globally.",
   potentialAction: {
     "@type": "SearchAction",
     target: {

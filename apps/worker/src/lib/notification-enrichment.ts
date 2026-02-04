@@ -18,7 +18,15 @@ import { fetchGitHubRepoData } from "@v1/data/github";
 
 export interface VersionAnalysis {
   isBreakingChange: boolean;
-  diffType: "major" | "premajor" | "minor" | "preminor" | "patch" | "prepatch" | "prerelease" | null;
+  diffType:
+    | "major"
+    | "premajor"
+    | "minor"
+    | "preminor"
+    | "patch"
+    | "prepatch"
+    | "prerelease"
+    | null;
   isPrerelease: boolean;
   isFirstStable: boolean;
 }
@@ -138,13 +146,17 @@ export async function analyzeSecurityUpdate(
  * Fetch changelog snippet from GitHub releases
  */
 export async function fetchChangelogSnippet(
-  repositoryUrl: string | undefined,
+  repositoryUrl: string | { url?: string } | undefined,
   version: string,
 ): Promise<string | null> {
   if (!repositoryUrl) return null;
 
+  // Handle repository as object (npm metadata can have { type, url })
+  const url = typeof repositoryUrl === "string" ? repositoryUrl : repositoryUrl.url;
+  if (!url) return null;
+
   // Extract owner/repo from URL
-  const match = repositoryUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+  const match = url.match(/github\.com\/([^/]+)\/([^/]+)/);
   if (!match) return null;
 
   const [, owner, repo] = match;
@@ -234,7 +246,7 @@ export async function enrichPackageUpdate(
   packageName: string,
   oldVersion: string | null | undefined,
   newVersion: string,
-  repositoryUrl: string | undefined,
+  repositoryUrl: string | { url?: string } | undefined,
 ): Promise<NotificationEnrichment> {
   // Run analyses in parallel
   const [versionAnalysis, securityAnalysis, changelogSnippet] = await Promise.all([

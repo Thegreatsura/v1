@@ -103,21 +103,21 @@ async function markAllAsRead(): Promise<void> {
 function SeverityIcon({ severity }: { severity: string }) {
   if (severity === "critical") {
     return (
-      <span className="text-red-500" title="Security update">
-        ●
+      <span className="text-[#ff003c] text-[8px]" title="Critical">
+        ▪
       </span>
     );
   }
   if (severity === "important") {
     return (
-      <span className="text-yellow-500" title="Breaking change">
-        ●
+      <span className="text-[#ff6700] text-[8px]" title="Important">
+        ▪
       </span>
     );
   }
   return (
-    <span className="text-blue-500" title="Update">
-      ●
+    <span className="text-muted text-[8px]" title="Update">
+      ▪
     </span>
   );
 }
@@ -132,11 +132,7 @@ function NotificationItem({
   const timeAgo = formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true });
 
   return (
-    <DropdownMenuItem
-      asChild
-      className={`cursor-pointer px-3 py-2 ${notification.read ? "opacity-60" : ""}`}
-      onClick={onRead}
-    >
+    <DropdownMenuItem asChild className="cursor-pointer px-3 py-2" onClick={onRead}>
       <Link href={`/${encodeURIComponent(notification.packageName)}`} className="block w-full">
         <div className="flex items-start gap-2">
           <SeverityIcon severity={notification.severity} />
@@ -155,10 +151,10 @@ function NotificationItem({
             </div>
             <div className="flex items-center gap-2 mt-0.5">
               {notification.isSecurityUpdate && (
-                <span className="text-[10px] text-red-400">Security fix</span>
+                <span className="text-[10px] text-muted">security</span>
               )}
               {notification.isBreakingChange && (
-                <span className="text-[10px] text-yellow-400">Breaking</span>
+                <span className="text-[10px] text-muted">breaking</span>
               )}
               <span className="text-[10px] text-muted">{timeAgo}</span>
             </div>
@@ -258,11 +254,11 @@ export function NotificationBell() {
           {/* Badge */}
           {totalUnread > 0 && (
             <span
-              className={`absolute -top-1.5 -right-1.5 text-[8px] min-w-[12px] h-[12px] flex items-center justify-center rounded-full font-medium ${
-                hasCritical ? "bg-red-500 text-white" : "bg-foreground text-background"
+              className={`absolute -top-0.5 -right-1 text-[6px] ${
+                hasCritical ? "text-[#ff003c]" : "text-muted"
               }`}
             >
-              {totalUnread > 99 ? "99+" : totalUnread}
+              ▪
             </span>
           )}
         </button>

@@ -20,7 +20,7 @@ import { extractCompatibility } from "../../lib/compatibility";
 import { getPreviousVersion } from "../../lib/version-tracker";
 import { enrichPackageUpdate } from "../../lib/notification-enrichment";
 import { dispatchNotifications } from "../../lib/notification-dispatcher";
-import { isDatabaseAvailable } from "../../lib/db";
+import { isDatabaseAvailable } from "@v1/db/client";
 import type { BulkSyncJobData, SyncJobData } from "./types";
 
 /**

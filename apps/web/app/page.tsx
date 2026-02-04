@@ -184,7 +184,7 @@ export default function Home() {
           <div className="text-center mb-8 mt-4">
             <h1 className="text-xl text-foreground">npm for agents</h1>
             <p className="text-sm text-muted mt-2">
-              MCP-first. Security signals. &lt;100ms globally.
+              MCP-first. Security signals. &lt;50ms globally.
             </p>
           </div>
 

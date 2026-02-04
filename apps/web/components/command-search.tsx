@@ -234,7 +234,7 @@ function CommandSearch({ open, setOpen }: CommandSearchProps) {
             {/* Results - responsive height */}
             <CommandList className="h-[50vh] sm:h-[320px] max-h-[320px] overflow-y-auto scrollbar-none p-2">
               {isLoading ? (
-                <div className="py-12 flex items-center justify-center gap-2 text-sm text-muted">
+                <div className="py-12 flex items-center justify-center gap-2 text-xs text-muted">
                   <Spinner /> searching
                 </div>
               ) : displayItems.length > 0 ? (

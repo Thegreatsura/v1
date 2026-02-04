@@ -10,7 +10,7 @@ import {
   SLACK_RATE_LIMIT,
   type SlackDeliveryJobData,
 } from "@v1/queue/delivery";
-import { db } from "../../lib/db";
+import { db } from "@v1/db/client";
 
 interface SlackConfig {
   accessToken: string;
@@ -167,7 +167,9 @@ async function processSlackDelivery(job: Job<SlackDeliveryJobData>): Promise<voi
   const message = formatSlackMessage(notification);
   await sendSlackMessage(config, message);
 
-  console.log(`[Slack] Sent notification for ${notification.packageName}@${notification.newVersion}`);
+  console.log(
+    `[Slack] Sent notification for ${notification.packageName}@${notification.newVersion}`,
+  );
 }
 
 /**

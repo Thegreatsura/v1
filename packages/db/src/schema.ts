@@ -112,6 +112,7 @@ export const favorite = pgTable(
   },
   (table) => [
     index("favorite_userId_idx").on(table.userId),
+    index("favorite_packageName_idx").on(table.packageName),
     uniqueIndex("favorite_unique").on(table.userId, table.packageName),
   ],
 );

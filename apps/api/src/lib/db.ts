@@ -1,7 +1,0 @@
-/**
- * Database Connection
- *
- * Re-exports from @v1/db package for backwards compatibility.
- */
-
-export { db, createDb, isDatabaseAvailable, type Database } from "@v1/db/client";

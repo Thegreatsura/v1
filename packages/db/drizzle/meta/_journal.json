@@ -15,6 +15,13 @@
       "when": 1770236132048,
       "tag": "0001_secret_reptil",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1770243141748,
+      "tag": "0002_dark_mad_thinker",
+      "breakpoints": true
     }
   ]
 }
