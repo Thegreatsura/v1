@@ -142,19 +142,34 @@ export function computeHealthAssessment(
       score += 5;
       positive.push("high-quality-score");
     } else if (scores.quality < 0.4) {
-      score -= 5;
-      warnings.push("low-quality-score");
+      // For extremely popular packages, don't penalize low quality scores
+      // (npms.io quality metrics may not reflect true package health for foundational tools)
+      const isExtremelyPopular = (pkg.stars && pkg.stars > 50_000) || pkg.downloads > 50_000_000;
+      if (!isExtremelyPopular) {
+        score -= 5;
+        warnings.push("low-quality-score");
+      } else {
+        warnings.push("low-quality-score-ignored-extremely-popular");
+      }
     }
   } else {
     // No npms data: infer quality/maintenance from stars + recency so strong packages can still reach 100
+    // For very popular packages (>50k stars or >50M downloads), allow longer update windows
+    const isVeryPopular = (pkg.stars && pkg.stars > 50_000) || pkg.downloads > 50_000_000;
+    const updateWindow = isVeryPopular ? 180 : 90; // 6 months for very popular, 3 months otherwise
+
     if (
       pkg.stars &&
       pkg.stars > 10_000 &&
-      daysSinceUpdate < 90 &&
+      daysSinceUpdate < updateWindow &&
       (!pkg.vulnerabilities || pkg.vulnerabilities === 0)
     ) {
       score += 5;
       positive.push("inferred-quality");
+    } else if (isVeryPopular && (!pkg.vulnerabilities || pkg.vulnerabilities === 0)) {
+      // Very popular packages get quality bonus even if not recently updated (they're stable)
+      score += 5;
+      positive.push("inferred-quality-very-popular");
     }
   }
 
@@ -167,15 +182,20 @@ export function computeHealthAssessment(
       score += 5;
       positive.push("growing-popularity");
     }
-  } else if (
-    pkg.downloads > 1_000_000 &&
-    pkg.stars &&
-    pkg.stars > 10_000 &&
-    (!pkg.vulnerabilities || pkg.vulnerabilities === 0)
-  ) {
-    // No trend data but popular and healthy: small bonus so top packages can reach 100
-    score += 5;
-    positive.push("inferred-trend");
+  } else {
+    // No trend data: infer trend from popularity and health
+    const isVeryPopular = (pkg.stars && pkg.stars > 50_000) || pkg.downloads > 50_000_000;
+
+    if (
+      pkg.downloads > 1_000_000 &&
+      pkg.stars &&
+      pkg.stars > 10_000 &&
+      (!pkg.vulnerabilities || pkg.vulnerabilities === 0)
+    ) {
+      // Popular and healthy: bonus so top packages can reach 100
+      score += 5;
+      positive.push("inferred-trend");
+    }
   }
 
   // === Size ===
@@ -192,6 +212,18 @@ export function computeHealthAssessment(
   if (pkg.stars && pkg.stars > 10000) {
     score += 5;
     positive.push("popular-repo");
+  }
+
+  // === Very Popular Packages Bonus ===
+  // For extremely popular packages (>50k stars or >50M downloads), add bonus
+  // to compensate for missing ESM/provenance/recent-update points
+  // These packages are foundational and stable even if they don't update frequently
+  const isExtremelyPopular = (pkg.stars && pkg.stars > 50_000) || pkg.downloads > 50_000_000;
+  if (isExtremelyPopular && (!pkg.vulnerabilities || pkg.vulnerabilities === 0)) {
+    // Add bonus for extremely popular, secure packages (TypeScript, React, etc.)
+    // This helps them reach 100 even if missing ESM/provenance/recent-update points
+    score += 5;
+    positive.push("extremely-popular");
   }
 
   // Clamp score

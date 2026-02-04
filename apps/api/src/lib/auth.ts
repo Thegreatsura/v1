@@ -1,13 +1,13 @@
 /**
  * Better Auth Configuration
  *
- * Authentication with GitHub OAuth, Drizzle ORM, and LRU cache for sessions
+ * Authentication with GitHub OAuth, Drizzle ORM.
+ * Uses cookieCache for fast session lookups (no LRU cache needed).
  */
 
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "./db";
-import { cache } from "./cache";
 import * as schema from "./auth-schema";
 
 const isProduction = process.env.BETTER_AUTH_URL?.includes("v1.run");
@@ -20,13 +20,6 @@ export const auth = db
       database: drizzleAdapter(db, { provider: "pg", schema }),
       trustedOrigins: ["http://localhost:3000", "https://v1.run", "https://www.v1.run"],
 
-      // Use existing LRU cache for fast session lookups
-      secondaryStorage: {
-        get: async (key) => cache.get(key),
-        set: async (key, value, ttl) => cache.set(key, value, ttl ?? 3600),
-        delete: async (key) => cache.delete(key),
-      },
-
       socialProviders: {
         github: {
           clientId: process.env.GITHUB_CLIENT_ID!,
@@ -38,12 +31,16 @@ export const auth = db
       },
 
       // Session and cookie configuration
+      // CookieCache handles fast session validation from cookies (no LRU cache needed)
       session: {
         expiresIn: 60 * 60 * 24 * 90, // 90 days (3 months - long-lived sessions)
         updateAge: 60 * 60 * 24 * 7, // Refresh session expiration after 7 days of activity
+        storeSessionInDatabase: true, // Store in DB, validate from cookies
         cookieCache: {
           enabled: true,
           maxAge: 60 * 60 * 24, // 24 hours (cookie cache duration)
+          // Session validation happens from cookies (fast, no DB query)
+          // Only queries DB when cookie cache expires or session is revoked
         },
       },
 

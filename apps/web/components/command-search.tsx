@@ -150,12 +150,18 @@ function CommandSearch({ open, setOpen }: CommandSearchProps) {
     }
   }, [open]);
 
-  // Prefetch first result
+  // Prefetch first result and popular packages
   useEffect(() => {
     if (results[0]) {
       router.prefetch(`/${encodeURIComponent(results[0].name)}`);
     }
-  }, [results, router]);
+    // Prefetch popular packages when showing them
+    if (query.trim() === "" && POPULAR_PACKAGES.length > 0) {
+      POPULAR_PACKAGES.slice(0, 3).forEach((pkg) => {
+        router.prefetch(`/${encodeURIComponent(pkg.name)}`);
+      });
+    }
+  }, [results, query, router]);
 
   const handleSelect = useCallback(
     (packageName: string) => {
@@ -164,6 +170,14 @@ function CommandSearch({ open, setOpen }: CommandSearchProps) {
       router.push(`/${encodeURIComponent(packageName)}`);
     },
     [router, setOpen],
+  );
+
+  // Prefetch on hover/focus for better perceived performance
+  const handleItemHover = useCallback(
+    (packageName: string) => {
+      router.prefetch(`/${encodeURIComponent(packageName)}`);
+    },
+    [router],
   );
 
   const handleSearch = useCallback((value: string) => {
@@ -229,6 +243,7 @@ function CommandSearch({ open, setOpen }: CommandSearchProps) {
                       key={item.name}
                       value={item.name}
                       onSelect={() => handleSelect(item.name)}
+                      onMouseEnter={() => handleItemHover(item.name)}
                       className="flex items-center gap-3 px-4 py-3 cursor-pointer text-subtle data-[selected=true]:bg-foreground/5 data-[selected=true]:text-foreground rounded-none"
                     >
                       <div className="flex-1 min-w-0">

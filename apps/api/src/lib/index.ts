@@ -9,8 +9,6 @@ export * from "./clients/index";
 // Data enrichment and health scoring
 export * from "./enrichment";
 export * from "./health-score";
-// Redis cache
-export * from "./cache";
 
 // Module replacements (in-memory)
 export * from "./replacements";

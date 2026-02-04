@@ -1,32 +1,18 @@
 /**
  * npms.io API Client for API Server
  *
- * Uses @v1/data/npms with Redis caching layer.
+ * Uses @v1/data/npms. Cloudflare edge cache handles response caching.
  */
 
 import { fetchNpmsScores as fetchNpmsScoresRaw, type NpmsScores } from "@v1/data/npms";
-import { CacheKey, cache, TTL } from "../cache";
 
 // Re-export type
 export type { NpmsScores } from "@v1/data/npms";
 
 /**
- * Fetch scores from npms.io with caching
+ * Fetch scores from npms.io
+ * Cloudflare edge cache handles caching of final API responses (24h for health endpoint)
  */
 export async function fetchNpmsScores(packageName: string): Promise<NpmsScores | null> {
-  const cacheKey = CacheKey.scores(packageName);
-
-  // Check cache first
-  const cached = await cache.get<NpmsScores>(cacheKey);
-  if (cached) return cached;
-
-  // Fetch from shared client
-  const scores = await fetchNpmsScoresRaw(packageName);
-
-  if (scores) {
-    // Cache for 7 days
-    await cache.set(cacheKey, scores, TTL.SCORES);
-  }
-
-  return scores;
+  return fetchNpmsScoresRaw(packageName);
 }

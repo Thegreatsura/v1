@@ -1,11 +1,9 @@
 /**
  * Package Enrichment Library
  *
- * Computes enriched data from npm packument on-demand and caches in Redis.
- * This includes details, security signals, and other computed data.
+ * Computes enriched data from npm packument on-demand.
+ * No caching here - Cloudflare caches final API responses.
  */
-
-import { CacheKey, cache, TTL } from "./cache";
 
 const NPM_REGISTRY = "https://registry.npmjs.org";
 
@@ -96,14 +94,9 @@ async function fetchPackument(packageName: string): Promise<NpmPackument | null>
 
 /**
  * Extract package details from packument
+ * No caching - Cloudflare caches final API responses
  */
 export async function getPackageDetails(packageName: string): Promise<PackageDetails | null> {
-  const cacheKey = CacheKey.details(packageName);
-
-  // Check cache first
-  const cached = await cache.get<PackageDetails>(cacheKey);
-  if (cached) return cached;
-
   const packument = await fetchPackument(packageName);
   if (!packument) return null;
 
@@ -140,7 +133,7 @@ export async function getPackageDetails(packageName: string): Promise<PackageDet
     }
   }
 
-  const details: PackageDetails = {
+  return {
     binCommands,
     fileCount: versionData?.dist?.fileCount,
     engineNode: versionData?.engines?.node,
@@ -155,23 +148,13 @@ export async function getPackageDetails(packageName: string): Promise<PackageDet
     fundingUrl,
     fundingPlatforms: [...new Set(fundingPlatforms)],
   };
-
-  // Cache for 1 day
-  await cache.set(cacheKey, details, TTL.DETAILS);
-
-  return details;
 }
 
 /**
  * Extract security signals from packument
+ * No caching - Cloudflare caches final API responses
  */
 export async function getSecuritySignals(packageName: string): Promise<SecuritySignals | null> {
-  const cacheKey = CacheKey.security(packageName);
-
-  // Check cache first
-  const cached = await cache.get<SecuritySignals>(cacheKey);
-  if (cached) return cached;
-
   const packument = await fetchPackument(packageName);
   if (!packument) return null;
 
@@ -180,7 +163,7 @@ export async function getSecuritySignals(packageName: string): Promise<SecurityS
   const deps = versionData?.dependencies || {};
   const scripts = versionData?.scripts || {};
 
-  const signals: SecuritySignals = {
+  return {
     hasGitDeps: Object.values(deps).some(
       (v) => v.startsWith("git://") || v.startsWith("git+") || v.includes("github:"),
     ),
@@ -191,23 +174,13 @@ export async function getSecuritySignals(packageName: string): Promise<SecurityS
     hasTestScript: Boolean(scripts.test),
     readmeSize: packument.readme?.length ?? 0,
   };
-
-  // Cache for 1 day
-  await cache.set(cacheKey, signals, TTL.SECURITY);
-
-  return signals;
 }
 
 /**
  * Compute download trend from npm downloads API
+ * No caching - Cloudflare caches final API responses
  */
 export async function getDownloadTrend(packageName: string): Promise<DownloadTrend | null> {
-  const cacheKey = CacheKey.trend(packageName);
-
-  // Check cache first
-  const cached = await cache.get<DownloadTrend>(cacheKey);
-  if (cached) return cached;
-
   try {
     // Fetch last week and 3 months ago
     const [recentRes, oldRes] = await Promise.all([
@@ -230,12 +203,7 @@ export async function getDownloadTrend(packageName: string): Promise<DownloadTre
     else if (percentChange < -10) trend = "declining";
     else trend = "stable";
 
-    const result: DownloadTrend = { trend, percentChange };
-
-    // Cache for 1 day
-    await cache.set(cacheKey, result, TTL.TREND);
-
-    return result;
+    return { trend, percentChange };
   } catch {
     return null;
   }
@@ -258,16 +226,11 @@ function getDateDaysAgo(days: number): string {
 }
 
 /**
- * Fetch live weekly downloads from npm API with caching
+ * Fetch live weekly downloads from npm API
+ * No caching - Cloudflare caches final API responses
  * Uses 7-day range ending yesterday to avoid incomplete today data
  */
 export async function getWeeklyDownloads(packageName: string): Promise<number> {
-  const cacheKey = `pkg:${packageName}:downloads`;
-
-  // Check cache first
-  const cached = cache.get<WeeklyDownloads>(cacheKey);
-  if (cached) return cached.downloads;
-
   try {
     // Use date range: 7 days ago to yesterday (7 full days, excluding today)
     const startDate = getDateDaysAgo(7);
@@ -280,11 +243,6 @@ export async function getWeeklyDownloads(packageName: string): Promise<number> {
     if (!response.ok) return 0;
 
     const data = (await response.json()) as { downloads: number };
-    const result: WeeklyDownloads = { downloads: data.downloads };
-
-    // Cache for 6 hours (downloads don't change that frequently)
-    cache.set(cacheKey, result, 6 * 60 * 60);
-
     return data.downloads;
   } catch {
     return 0;

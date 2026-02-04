@@ -1,11 +1,13 @@
 /**
  * GitHub API Client for API Server
  *
- * Uses @v1/data/github with Redis caching layer.
+ * Uses @v1/data/github. No caching - Cloudflare caches final API responses.
  */
 
-import { fetchGitHubRepoBasic, fetchGitHubReadme, parseGitHubUrl } from "@v1/data/github";
-import { CacheKey, cache, TTL } from "../cache";
+import { fetchGitHubRepoBasic, parseGitHubUrl } from "@v1/data/github";
+
+// Get GitHub token from environment (optional - increases rate limit from 60/hour to 5000/hour)
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
 // Re-export types and utilities
 export { type GitHubRepoData, parseGitHubUrl, fetchGitHubReadme } from "@v1/data/github";
@@ -25,24 +27,20 @@ export interface GitHubData {
 }
 
 /**
- * Fetch repository data from GitHub with caching
+ * Fetch repository data from GitHub
+ * No caching - Cloudflare caches final API responses
  */
 export async function fetchGitHubData(repositoryUrl: string): Promise<GitHubData | null> {
   const parsed = parseGitHubUrl(repositoryUrl);
   if (!parsed) return null;
 
   const { owner, repo } = parsed;
-  const cacheKey = CacheKey.github(`${owner}/${repo}`);
 
-  // Check cache first
-  const cached = await cache.get<GitHubData>(cacheKey);
-  if (cached) return cached;
-
-  // Fetch from shared client
-  const data = await fetchGitHubRepoBasic(owner, repo);
+  // Fetch from shared client (with token if available)
+  const data = await fetchGitHubRepoBasic(owner, repo, GITHUB_TOKEN);
   if (!data) return null;
 
-  const result: GitHubData = {
+  return {
     stars: data.stars,
     forks: data.forks,
     openIssues: data.openIssues,
@@ -52,34 +50,16 @@ export async function fetchGitHubData(repositoryUrl: string): Promise<GitHubData
     topics: data.topics,
     language: data.language,
   };
-
-  // Cache for 1 day
-  await cache.set(cacheKey, result, TTL.GITHUB);
-
-  return result;
 }
 
 /**
  * Fetch GitHub data for a package by name
+ * No caching - Cloudflare caches final API responses
  */
 export async function fetchGitHubDataForPackage(
   packageName: string,
   repositoryUrl?: string,
 ): Promise<GitHubData | null> {
-  const cacheKey = CacheKey.github(packageName);
-
-  // Check package-level cache first
-  const cached = await cache.get<GitHubData>(cacheKey);
-  if (cached) return cached;
-
   if (!repositoryUrl) return null;
-
-  const data = await fetchGitHubData(repositoryUrl);
-
-  if (data) {
-    // Also cache by package name for quick lookups
-    await cache.set(cacheKey, data, TTL.GITHUB);
-  }
-
-  return data;
+  return fetchGitHubData(repositoryUrl);
 }

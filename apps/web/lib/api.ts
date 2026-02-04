@@ -125,10 +125,13 @@ export async function fetchPackageHealth(name: string): Promise<PackageHealthRes
       return null;
     }
 
-    // Use absolute URL and bypass Next.js caching to ensure external API call
+    // Use absolute URL - Next.js will cache this response
+    // Cloudflare caches the API response (24h), then Next.js ISR caches the page (24h)
     const url = `${API_URL}/api/package/${encodeURIComponent(name)}`;
     const res = await fetch(url, {
-      cache: "no-store", // Bypass Next.js fetch cache to ensure external API call
+      // Use Next.js fetch caching - respects Cache-Control headers from API
+      // API sets s-maxage=86400 (24h) for Cloudflare, Next.js will respect this
+      next: { revalidate: 86400 }, // 24 hours - matches API cache duration
       headers: {
         Accept: "application/json",
       },

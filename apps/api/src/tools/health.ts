@@ -4,7 +4,7 @@
  * Comprehensive package assessment - one call returns everything an AI needs.
  * Always fetches live data from authoritative sources (npm, GitHub).
  * Typesense is only used for search/alternatives, not as data source.
- * Caching is handled by Cloudflare edge + in-memory LRU for external API calls.
+ * Caching: Cloudflare edge cache handles all response caching (24h for health endpoint).
  */
 
 import { inferCategory } from "@v1/decisions";
@@ -201,7 +201,7 @@ interface PackageData {
  * Get comprehensive package health
  *
  * Always fetches from npm registry (source of truth).
- * Cloudflare handles edge caching, internal LRU caches external API responses.
+ * Cloudflare edge cache handles all response caching (24h TTL).
  */
 export async function getPackageHealth(name: string): Promise<PackageHealthResponse | null> {
   // 1. Fetch from npm registry (authoritative source)

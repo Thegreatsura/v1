@@ -61,7 +61,9 @@ function resolveVersion(range: string, versions: string[]): string | null {
 
 function matchesPlatform(v: PackumentVersion): boolean {
   if (v.os && v.os.length > 0) {
-    const match = v.os.some((os) => (os.startsWith("!") ? os.slice(1) !== "linux" : os === "linux"));
+    const match = v.os.some((os) =>
+      os.startsWith("!") ? os.slice(1) !== "linux" : os === "linux",
+    );
     if (!match) return false;
   }
   if (v.cpu && v.cpu.length > 0) {
@@ -76,27 +78,17 @@ function matchesPlatform(v: PackumentVersion): boolean {
   return true;
 }
 
-async function fetchPackument(
-  name: string,
-  cache: Map<string, Packument | null>,
-  signal: AbortSignal,
-): Promise<Packument | null> {
-  const cached = cache.get(name);
-  if (cached !== undefined) return cached;
+async function fetchPackument(name: string, signal: AbortSignal): Promise<Packument | null> {
   try {
     const res = await fetch(`${REGISTRY}/${encodeName(name)}`, {
       headers: { Accept: "application/json" },
       signal,
     });
     if (!res.ok) {
-      cache.set(name, null);
       return null;
     }
-    const data = (await res.json()) as Packument;
-    cache.set(name, data);
-    return data;
+    return (await res.json()) as Packument;
   } catch {
-    cache.set(name, null);
     return null;
   }
 }
@@ -111,7 +103,6 @@ async function resolveDependencyTree(
   signal: AbortSignal,
 ): Promise<Map<string, ResolvedPackage>> {
   const resolved = new Map<string, ResolvedPackage>();
-  const packumentCache = new Map<string, Packument | null>();
   const seen = new Set<string>();
 
   let currentLevel = new Map<string, string>([[rootName, rootVersion]]);
@@ -131,7 +122,7 @@ async function resolveDependencyTree(
 
       await Promise.all(
         batch.map(async ([name, range]) => {
-          const packument = await fetchPackument(name, packumentCache, signal);
+          const packument = await fetchPackument(name, signal);
           if (!packument?.versions) return;
 
           const versions = Object.keys(packument.versions);
@@ -185,8 +176,7 @@ export async function getInstallSize(
   const signal = controller.signal;
 
   try {
-    const packumentCache = new Map<string, Packument | null>();
-    const packument = await fetchPackument(name, packumentCache, signal);
+    const packument = await fetchPackument(name, signal);
     if (!packument?.versions) return null;
 
     const resolvedVersion =

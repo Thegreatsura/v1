@@ -253,16 +253,23 @@ export async function fetchGitHubReadme(owner: string, repo: string): Promise<st
 export async function fetchGitHubRepoBasic(
   owner: string,
   repo: string,
+  token?: string,
 ): Promise<Pick<
   GitHubRepoData,
   "stars" | "forks" | "openIssues" | "pushedAt" | "isArchived" | "topics" | "language"
 > | null> {
+  const headers: Record<string, string> = {
+    Accept: "application/vnd.github.v3+json",
+    "User-Agent": "v1.run",
+  };
+
+  if (token) {
+    headers.Authorization = `token ${token}`;
+  }
+
   try {
     const response = await fetch(`${GITHUB_API}/repos/${owner}/${repo}`, {
-      headers: {
-        Accept: "application/vnd.github.v3+json",
-        "User-Agent": "v1.run",
-      },
+      headers,
     });
 
     if (!response.ok) {

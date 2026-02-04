@@ -1,12 +1,11 @@
 /**
  * Queue Client for API
  *
- * Adds jobs to the worker's sync queue with deduplication.
+ * Adds jobs to the worker's sync queue with BullMQ deduplication via job IDs.
  */
 
 import { closeAllQueues, getConnectionInfo, getQueue, JOB_PRESETS, type Queue } from "@v1/queue";
 import { NPM_SYNC_QUEUE, type SyncJobData } from "@v1/queue/npm-sync";
-import { cache } from "./cache";
 
 let syncQueue: Queue<SyncJobData> | null = null;
 let logged = false;
@@ -26,25 +25,29 @@ function getSyncQueue(): Queue<SyncJobData> {
   return syncQueue;
 }
 
-// Deduplication - don't re-queue within 5 minutes
-const QUEUED_KEY = (name: string) => `queued:${name}`;
-const QUEUED_TTL = 60 * 5;
-
 /**
- * Queue a package for syncing. Returns true if queued, false if deduplicated.
+ * Queue a package for syncing.
+ * Uses BullMQ's built-in deduplication via stable job IDs.
+ * Returns true if queued, false if duplicate (already in queue).
  */
 export async function queuePackageSync(name: string): Promise<boolean> {
-  const recentlyQueued = await cache.get<boolean>(QUEUED_KEY(name));
-  if (recentlyQueued) return false;
-
   try {
     const queue = getSyncQueue();
+    const jobId = `api-sync-${name}`;
+
+    // Check if job already exists (waiting, active, or delayed)
+    const existingJob = await queue.getJob(jobId);
+    if (existingJob && !existingJob.finishedOn) {
+      // Job exists and hasn't finished yet - deduplicated
+      return false;
+    }
+
+    // Add job with stable ID - BullMQ will prevent duplicates automatically
     await queue.add(
       "sync",
       { name, deleted: false, seq: `api-${Date.now()}` },
-      { jobId: `api-sync-${name}-${Date.now()}`, priority: 1 },
+      { jobId, priority: 1 },
     );
-    await cache.set(QUEUED_KEY(name), true, QUEUED_TTL);
     console.log(`[Queue] Queued: ${name}`);
     return true;
   } catch (error) {

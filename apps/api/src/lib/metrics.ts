@@ -1,11 +1,12 @@
 /**
  * Package metrics fetcher for comparison engine
+ *
+ * Cloudflare edge cache handles caching of final API responses (6h for compare endpoint)
  */
 
 import type { BundleData, PackageMetrics } from "@v1/decisions/schema";
 import { fetchPackageMetadata } from "./clients/npm";
 import { fetchGitHubData } from "./clients/github";
-import { cache, TTL } from "./cache";
 
 const BUNDLEPHOBIA_API = "https://bundlephobia.com/api/size";
 const NPM_DOWNLOADS = "https://api.npmjs.org/downloads";
@@ -14,11 +15,6 @@ const NPM_DOWNLOADS = "https://api.npmjs.org/downloads";
  * Fetch complete metrics for a package
  */
 export async function fetchPackageMetrics(packageName: string): Promise<PackageMetrics | null> {
-  // Check cache
-  const cacheKey = `pkg:${packageName}:metrics`;
-  const cached = cache.get<PackageMetrics>(cacheKey);
-  if (cached) return cached;
-
   try {
     // Fetch all data in parallel
     const [npmData, downloadData, bundleData] = await Promise.all([
@@ -37,9 +33,6 @@ export async function fetchPackageMetrics(packageName: string): Promise<PackageM
     }
 
     const metrics = buildMetrics(packageName, npmData, downloadData, bundleData, githubData);
-
-    // Cache for 1 hour
-    cache.set(cacheKey, metrics, TTL.HEALTH);
 
     return metrics;
   } catch (error) {
