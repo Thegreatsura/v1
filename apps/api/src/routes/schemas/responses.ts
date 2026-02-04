@@ -173,6 +173,18 @@ export const WeeklyDownloadsResponseSchema = z
   .openapi("WeeklyDownloadsResponse");
 
 // =============================================================================
+// Install Size
+// =============================================================================
+
+export const InstallSizeResponseSchema = z
+  .object({
+    selfSize: z.number().describe("Unpacked size of the package itself (bytes)"),
+    totalSize: z.number().describe("Total unpacked size including all dependencies (bytes)"),
+    dependencyCount: z.number().describe("Number of transitive dependencies"),
+  })
+  .openapi("InstallSizeResponse");
+
+// =============================================================================
 // Health Assessment
 // =============================================================================
 

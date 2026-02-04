@@ -5,10 +5,12 @@ import { Suspense } from "react";
 import { FavoriteButton } from "@/components/favorite-button";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
+import { HealthScoreTooltip, HealthScoreTooltipTrigger } from "@/components/health-score-tooltip";
+import { InstallSizeStatCell } from "@/components/install-size-stat";
 import { InstallTabs } from "@/components/install-tabs";
 import { TimeAgo } from "@/components/time-ago";
 import { WeeklyDownloads } from "@/components/weekly-downloads";
-import { formatBytes, formatNumber, getPackage } from "@/lib/packages";
+import { formatNumber, getPackage } from "@/lib/packages";
 import { getStaticPackages } from "@/lib/popular-packages";
 
 // ISR: Revalidate pages every 24 hours (on-demand revalidation handles updates)
@@ -187,7 +189,11 @@ export default async function PackagePage({ params }: PageProps) {
             <div className="flex flex-wrap gap-y-2 -mx-4">
               <StatCell label="license" value={pkg.license || "—"} />
               <StatCell label="deps" value={String(pkg.dependencyCount)} />
-              {pkg.unpackedSize && <StatCell label="size" value={formatBytes(pkg.unpackedSize)} />}
+              <InstallSizeStatCell
+                name={pkg.name}
+                version={pkg.version}
+                unpackedSize={pkg.unpackedSize}
+              />
               {pkg.health ? (
                 <VulnStatCellFromHealth vulns={pkg.health.security.vulnerabilities.total} />
               ) : (
@@ -333,8 +339,9 @@ export default async function PackagePage({ params }: PageProps) {
               {/* Health Score */}
               {pkg.health && (
                 <div className="border-b border-border py-4">
-                  <h3 className="text-xs uppercase tracking-widest text-subtle mb-3">
+                  <h3 className="text-xs uppercase tracking-widest text-subtle mb-3 flex items-center gap-1.5">
                     health score
+                    <HealthScoreTooltipTrigger />
                   </h3>
                   <div className="flex items-center gap-3">
                     <span
@@ -484,7 +491,7 @@ export default async function PackagePage({ params }: PageProps) {
 
 function StatCell({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex-1 min-w-[80px] sm:min-w-[100px] px-4 py-3">
+    <div className="flex-1 min-w-[64px] sm:min-w-[80px] px-3 py-3">
       <div className="text-[10px] uppercase tracking-widest text-subtle">{label}</div>
       <div className="text-sm text-foreground font-medium tabular-nums">{value}</div>
     </div>
@@ -493,7 +500,7 @@ function StatCell({ label, value }: { label: string; value: React.ReactNode }) {
 
 function VulnStatCellFromHealth({ vulns }: { vulns: number }) {
   return (
-    <div className="flex-1 min-w-[80px] sm:min-w-[100px] px-4 py-3">
+    <div className="flex-1 min-w-[64px] sm:min-w-[80px] px-3 py-3">
       <div className="text-[10px] uppercase tracking-widest text-subtle">vulns</div>
       <div
         className={`text-sm font-medium tabular-nums ${vulns > 0 ? "text-red-400" : "text-foreground"}`}
@@ -506,12 +513,14 @@ function VulnStatCellFromHealth({ vulns }: { vulns: number }) {
 
 function HealthScoreCell({ score, grade }: { score: number; grade: string }) {
   return (
-    <div className="flex-1 min-w-[80px] sm:min-w-[100px] px-4 py-3">
-      <div className="text-[10px] uppercase tracking-widest text-subtle">health</div>
-      <div className="text-sm font-medium" style={{ color: getGradeColor(grade) }}>
-        {grade} ({score})
+    <HealthScoreTooltip className="flex flex-1 min-w-[64px] sm:min-w-[80px] px-3 py-3">
+      <div>
+        <div className="text-[10px] uppercase tracking-widest text-subtle">health</div>
+        <div className="text-sm font-medium" style={{ color: getGradeColor(grade) }}>
+          {grade} ({score})
+        </div>
       </div>
-    </div>
+    </HealthScoreTooltip>
   );
 }
 
@@ -529,14 +538,14 @@ function StarsStatCell({ stars, repository }: { stars: number; repository?: stri
         href={repository}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex-1 min-w-[80px] sm:min-w-[100px] px-4 py-3 hover:bg-surface transition-colors"
+        className="flex-1 min-w-[64px] sm:min-w-[80px] px-3 py-3 hover:bg-surface transition-colors"
       >
         {content}
       </Link>
     );
   }
 
-  return <div className="flex-1 min-w-[80px] sm:min-w-[100px] px-4 py-3">{content}</div>;
+  return <div className="flex-1 min-w-[64px] sm:min-w-[80px] px-3 py-3">{content}</div>;
 }
 
 function getGradeColor(grade: string): string {
@@ -574,7 +583,7 @@ async function VulnStatCell({ packageName, version }: { packageName: string; ver
     const count = data.vulns?.length || 0;
 
     return (
-      <div className="flex-1 min-w-[80px] sm:min-w-[100px] px-4 py-3">
+      <div className="flex-1 min-w-[64px] sm:min-w-[80px] px-3 py-3">
         <div className="text-[10px] uppercase tracking-widest text-subtle">vulns</div>
         <div className="text-sm font-medium tabular-nums text-foreground">{count}</div>
       </div>

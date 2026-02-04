@@ -9,6 +9,7 @@ import {
   checkVulnerabilities,
   findAlternatives,
 } from "../tools/index";
+import { getInstallSize } from "../lib/install-size";
 import { getPackageHealth } from "../tools/health";
 import { getPackageVersion } from "../tools/version";
 import { getWeeklyDownloads } from "../tools/downloads";
@@ -18,6 +19,7 @@ import {
   CheckVulnerabilitiesResponseSchema,
   ErrorResponseSchema,
   FindAlternativesResponseSchema,
+  InstallSizeResponseSchema,
   PackageHealthResponseSchema,
   PackageVersionResponseSchema,
   WeeklyDownloadsResponseSchema,
@@ -28,6 +30,8 @@ const CACHE = {
   LONG: "public, s-maxage=86400, stale-while-revalidate=3600",
   MEDIUM: "public, s-maxage=21600, stale-while-revalidate=3600",
   SHORT: "public, s-maxage=3600, stale-while-revalidate=600",
+  /** 7 days – install size changes only when package/deps publish */
+  WEEK: "public, s-maxage=604800, stale-while-revalidate=86400",
 };
 
 // Common param schema
@@ -185,6 +189,38 @@ const getPackageDownloadsRoute = createRoute({
   },
 });
 
+const getPackageInstallSizeRoute = createRoute({
+  method: "get",
+  path: "/api/package/{name}/install-size",
+  tags: ["Package"],
+  summary: "Get install size",
+  description:
+    "Get package unpacked size and total install size including all transitive dependencies",
+  request: {
+    params: packageNameParam,
+    query: z.object({
+      version: z.string().optional().openapi({
+        description: "Package version (defaults to latest)",
+        example: "1.0.0",
+      }),
+    }),
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: InstallSizeResponseSchema } },
+      description: "Install size data",
+    },
+    404: {
+      content: { "application/json": { schema: ErrorResponseSchema } },
+      description: "Package not found or resolution failed",
+    },
+    500: {
+      content: { "application/json": { schema: ErrorResponseSchema } },
+      description: "Server error",
+    },
+  },
+});
+
 const getPackageHealthRoute = createRoute({
   method: "get",
   path: "/api/package/{name}",
@@ -292,6 +328,22 @@ export function createPackageRoutes() {
       return c.json(result, 200);
     } catch (error) {
       return c.json({ error: error instanceof Error ? error.message : "Unknown error" }, 500);
+    }
+  });
+
+  // GET /api/package/:name/install-size
+  app.openapi(getPackageInstallSizeRoute, async (c) => {
+    try {
+      const name = decodeURIComponent(c.req.param("name"));
+      const version = c.req.query("version");
+      const result = await getInstallSize(name, version || undefined);
+      if (!result) {
+        return c.json({ error: "Package not found or resolution failed" }, 404);
+      }
+      c.header("Cache-Control", CACHE.WEEK);
+      return c.json(result, 200);
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : "Server error" }, 500);
     }
   });
 

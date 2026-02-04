@@ -2,6 +2,7 @@
  * Package Downloads Tool
  *
  * Fetches download history from npm and aggregates into weekly data.
+ * Caching is handled at the Cloudflare edge layer.
  */
 
 const NPM_DOWNLOADS_API = "https://api.npmjs.org/downloads";
@@ -115,7 +116,11 @@ export async function getWeeklyDownloads(
 
     const response = await fetch(url);
     if (!response.ok) {
-      if (response.status === 404) return null;
+      // 404 = package not found, 429 = rate limited - both return null gracefully
+      if (response.status === 404 || response.status === 429) {
+        console.error(`[Downloads] Failed to fetch downloads for ${name}:`, response.status);
+        return null;
+      }
       throw new Error(`npm API returned ${response.status}`);
     }
 

@@ -7,6 +7,7 @@ import { marked, type Tokens } from "marked";
 import sanitizeHtml from "sanitize-html";
 import { createHighlighterCore, type HighlighterCore } from "shiki/core";
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
+import emojiRegex from "emoji-regex";
 
 // =============================================================================
 // Shiki Highlighter
@@ -304,57 +305,47 @@ function slugify(text: string): string {
 }
 
 // =============================================================================
-// Emoji Conversion (simplified subset)
+// Emoji Stripping
 // =============================================================================
 
-const COMMON_EMOJIS: Record<string, string> = {
-  "100": "💯",
-  "+1": "👍",
-  "-1": "👎",
-  heart: "❤️",
-  fire: "🔥",
-  star: "⭐",
-  rocket: "🚀",
-  sparkles: "✨",
-  warning: "⚠️",
-  x: "❌",
-  white_check_mark: "✅",
-  heavy_check_mark: "✔️",
-  boom: "💥",
-  zap: "⚡",
-  bug: "🐛",
-  memo: "📝",
-  bulb: "💡",
-  package: "📦",
-  tada: "🎉",
-  construction: "🚧",
-  lock: "🔒",
-  key: "🔑",
-  gear: "⚙️",
-  wrench: "🔧",
-  hammer: "🔨",
-  link: "🔗",
-  eyes: "👀",
-  thinking: "🤔",
-  question: "❓",
-  exclamation: "❗",
-  wave: "👋",
-  pray: "🙏",
-  clap: "👏",
-  muscle: "💪",
-  point_right: "👉",
-  point_left: "👈",
-  point_up: "☝️",
-  point_down: "👇",
-  raised_hands: "🙌",
-  ok_hand: "👌",
-  v: "✌️",
-};
+const emojiRegexPattern = emojiRegex();
 
-function convertToEmoji(text: string): string {
-  return text.replace(/:([a-z0-9_+-]+):/gi, (match, key) => {
-    return COMMON_EMOJIS[key.toLowerCase()] || match;
+/**
+ * Strip emojis from HTML, but preserve code blocks
+ */
+function stripEmojisFromHtml(html: string): string {
+  // Split HTML into parts: code blocks and everything else
+  const codeBlockRegex = /<pre[^>]*>[\s\S]*?<\/pre>/gi;
+  const codeInlineRegex = /<code[^>]*>[\s\S]*?<\/code>/gi;
+
+  const codeBlocks: string[] = [];
+  const inlineCodes: string[] = [];
+
+  // Extract code blocks and inline code
+  let processed = html.replace(codeBlockRegex, (match) => {
+    codeBlocks.push(match);
+    return `__CODE_BLOCK_${codeBlocks.length - 1}__`;
   });
+
+  processed = processed.replace(codeInlineRegex, (match) => {
+    inlineCodes.push(match);
+    return `__INLINE_CODE_${inlineCodes.length - 1}__`;
+  });
+
+  // Strip emojis from non-code content
+  processed = processed.replace(emojiRegexPattern, "");
+  processed = processed.replace(/:([a-z0-9_+-]+):/gi, "");
+
+  // Restore code blocks
+  codeBlocks.forEach((block, i) => {
+    processed = processed.replace(`__CODE_BLOCK_${i}__`, block);
+  });
+
+  inlineCodes.forEach((code, i) => {
+    processed = processed.replace(`__INLINE_CODE_${i}__`, code);
+  });
+
+  return processed;
 }
 
 // =============================================================================
@@ -455,8 +446,11 @@ export async function renderReadmeHtml(
     },
   });
 
+  // Strip emojis from HTML, preserving code blocks
+  const cleaned = stripEmojisFromHtml(sanitized);
+
   return {
-    html: convertToEmoji(sanitized),
+    html: cleaned,
   };
 }
 

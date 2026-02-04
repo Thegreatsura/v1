@@ -9,6 +9,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "emoji-regex": "^10.6.0",
     "marked": "^17.0.1",
     "sanitize-html": "^2.17.0",
     "shiki": "^3.22.0"

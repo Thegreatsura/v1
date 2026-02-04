@@ -102,11 +102,6 @@ export function computeHealthAssessment(
     positive.push("no-vulnerabilities");
   }
 
-  if (pkg.hasInstallScripts) {
-    score -= 5;
-    warnings.push("has-install-scripts");
-  }
-
   if (pkg.hasProvenance) {
     score += 5;
     positive.push("has-provenance");
@@ -150,6 +145,17 @@ export function computeHealthAssessment(
       score -= 5;
       warnings.push("low-quality-score");
     }
+  } else {
+    // No npms data: infer quality/maintenance from stars + recency so strong packages can still reach 100
+    if (
+      pkg.stars &&
+      pkg.stars > 10_000 &&
+      daysSinceUpdate < 90 &&
+      (!pkg.vulnerabilities || pkg.vulnerabilities === 0)
+    ) {
+      score += 5;
+      positive.push("inferred-quality");
+    }
   }
 
   // === Trend ===
@@ -161,6 +167,15 @@ export function computeHealthAssessment(
       score += 5;
       positive.push("growing-popularity");
     }
+  } else if (
+    pkg.downloads > 1_000_000 &&
+    pkg.stars &&
+    pkg.stars > 10_000 &&
+    (!pkg.vulnerabilities || pkg.vulnerabilities === 0)
+  ) {
+    // No trend data but popular and healthy: small bonus so top packages can reach 100
+    score += 5;
+    positive.push("inferred-trend");
   }
 
   // === Size ===

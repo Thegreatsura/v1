@@ -48,6 +48,7 @@ import {
 } from "../lib/health-score";
 import { queuePackageSync } from "../lib/queue";
 import { formatReplacement, type ReplacementInfo } from "../lib/replacements";
+import { stripHtml } from "../lib/utils";
 
 /**
  * Full health response schema
@@ -260,8 +261,8 @@ export async function getPackageHealth(name: string): Promise<PackageHealthRespo
   // 7. Check for known replacements
   const replacement = formatReplacement(name);
 
-  // 8. Compute health score
-  const health = computeHealthScore(pkg, scores, security, trend);
+  // 8. Compute health score (pass GitHub stars so popular repos get +5)
+  const health = computeHealthScore(pkg, scores, security, trend, github);
 
   // 9. Build response
   return buildHealthResponse(
@@ -348,7 +349,7 @@ function buildPackageData(
   return {
     name: npm.name,
     version,
-    description: npm.description,
+    description: stripHtml(npm.description),
     keywords: npm.keywords,
     author: author || undefined,
     authorGithub,
@@ -408,6 +409,7 @@ function computeHealthScore(
   scores: NpmsScores | null,
   security: SecuritySignals | null,
   trend: DownloadTrend | null,
+  github: GitHubData | null,
 ): HealthAssessment {
   // Convert to format expected by computeHealthAssessment
   const pkgDoc: PackageDocument = {
@@ -441,6 +443,8 @@ function computeHealthScore(
     licenseType: pkg.licenseType,
     moduleFormat: pkg.moduleFormat,
     inferredCategory: pkg.category,
+    stars: github?.stars,
+    unpackedSize: pkg.unpackedSize,
   };
 
   return computeHealthAssessment(pkgDoc, scores, security, trend);

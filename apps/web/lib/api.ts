@@ -168,6 +168,26 @@ export async function fetchAlternatives(packageName: string): Promise<Alternativ
   return res.json();
 }
 
+// Install Size API
+export interface InstallSizeResponse {
+  selfSize: number;
+  totalSize: number;
+  dependencyCount: number;
+}
+
+export async function fetchInstallSize(
+  name: string,
+  version?: string,
+): Promise<InstallSizeResponse | null> {
+  if (!API_URL) return null;
+  const url = `${API_URL}/api/package/${encodeURIComponent(name)}/install-size${
+    version ? `?version=${encodeURIComponent(version)}` : ""
+  }`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  return res.json();
+}
+
 // Utils
 export function formatDownloads(num: number): string {
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;

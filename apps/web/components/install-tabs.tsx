@@ -116,7 +116,7 @@ export function InstallTabs({ packageName, hasTypes }: InstallTabsProps) {
           <div
             key={i}
             onClick={() => handleCopy(cmd.full)}
-            className={`group flex items-center justify-between border border-border px-4 py-3 cursor-pointer transition-colors hover:border-foreground ${
+            className={`group flex items-center justify-between border border-border px-4 py-3 cursor-pointer transition-colors ${
               cmd.muted ? "bg-background" : "bg-surface"
             }`}
           >
@@ -152,7 +152,7 @@ export function InstallTabs({ packageName, hasTypes }: InstallTabsProps) {
             </div>
             <span
               className={`text-xs uppercase tracking-wider transition-colors shrink-0 ml-2 ${
-                copied === cmd.full ? "text-foreground" : "text-faint group-hover:text-muted"
+                copied === cmd.full ? "text-foreground" : "text-faint group-hover:text-foreground!"
               }`}
             >
               {copied === cmd.full ? "copied" : "copy"}
