@@ -71,3 +71,4 @@ class LRUCache<T> {
 export const healthCache = new LRUCache(500, 3600000); // 500 entries, 1 hour TTL
 export const versionCache = new LRUCache(1000, 1800000); // 1000 entries, 30 min TTL
 export const compareCache = new LRUCache(200, 1800000); // 200 entries, 30 min TTL
+export const downloadsCache = new LRUCache(1000, 21600000); // 1000 entries, 6 hours TTL (downloads change slowly)

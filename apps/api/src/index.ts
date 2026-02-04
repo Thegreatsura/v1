@@ -108,7 +108,7 @@ app.get(
   "/docs",
   apiReference({
     url: "/openapi.json",
-    theme: "kepler",
+    theme: "moon",
     layout: "modern",
     defaultHttpClient: {
       targetKey: "js",

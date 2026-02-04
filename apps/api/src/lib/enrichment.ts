@@ -6,6 +6,29 @@
  */
 
 const NPM_REGISTRY = "https://registry.npmjs.org";
+const NPM_TOKEN = process.env.NPM_TOKEN;
+
+/**
+ * Get headers for npm API requests (includes auth if token is configured)
+ *
+ * Note: Any valid npm token works for public package data (downloads, metadata).
+ * No package-specific scopes are needed since this data is public. The token
+ * is only used for authentication to get higher rate limits.
+ */
+function getNpmHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+  };
+
+  // Add Authorization header if npm token is configured
+  // This increases rate limits for authenticated requests
+  // Works with any valid npm token - no package scopes needed for public data
+  if (NPM_TOKEN) {
+    headers.Authorization = `Bearer ${NPM_TOKEN}`;
+  }
+
+  return headers;
+}
 
 /**
  * Package details from packument
@@ -78,11 +101,13 @@ interface NpmPackument {
  */
 async function fetchPackument(packageName: string): Promise<NpmPackument | null> {
   try {
+    const headers = {
+      ...getNpmHeaders(),
+      "User-Agent": "v1.run-api",
+    };
+
     const response = await fetch(`${NPM_REGISTRY}/${encodeURIComponent(packageName)}`, {
-      headers: {
-        Accept: "application/json",
-        "User-Agent": "v1.run-api",
-      },
+      headers,
     });
 
     if (!response.ok) return null;
@@ -182,10 +207,15 @@ export async function getSecuritySignals(packageName: string): Promise<SecurityS
  */
 export async function getDownloadTrend(packageName: string): Promise<DownloadTrend | null> {
   try {
+    const headers = getNpmHeaders();
     // Fetch last week and 3 months ago
     const [recentRes, oldRes] = await Promise.all([
-      fetch(`https://api.npmjs.org/downloads/point/last-week/${encodeURIComponent(packageName)}`),
-      fetch(`https://api.npmjs.org/downloads/point/last-month/${encodeURIComponent(packageName)}`),
+      fetch(`https://api.npmjs.org/downloads/point/last-week/${encodeURIComponent(packageName)}`, {
+        headers,
+      }),
+      fetch(`https://api.npmjs.org/downloads/point/last-month/${encodeURIComponent(packageName)}`, {
+        headers,
+      }),
     ]);
 
     if (!recentRes.ok || !oldRes.ok) return null;
@@ -226,6 +256,60 @@ function getDateDaysAgo(days: number): string {
 }
 
 /**
+ * Sleep for a given number of milliseconds
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Fetch from npm API with retry logic for rate limiting
+ */
+async function fetchWithRetry(
+  url: string,
+  maxRetries = 3,
+  initialDelay = 1000,
+): Promise<Response | null> {
+  const headers = getNpmHeaders();
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const response = await fetch(url, { headers });
+
+    // Success - return response
+    if (response.ok) {
+      return response;
+    }
+
+    // 404 - package not found, don't retry
+    if (response.status === 404) {
+      return response;
+    }
+
+    // 429 - rate limited, retry with exponential backoff
+    if (response.status === 429) {
+      if (attempt < maxRetries) {
+        const delay = initialDelay * Math.pow(2, attempt);
+        const retryAfter = response.headers.get("Retry-After");
+        const waitTime = retryAfter ? Number.parseInt(retryAfter) * 1000 : delay;
+
+        console.warn(
+          `[Enrichment] Rate limited (429), retrying in ${waitTime}ms (attempt ${attempt + 1}/${maxRetries})`,
+        );
+        await sleep(waitTime);
+        continue;
+      }
+      // Max retries reached, return null
+      return null;
+    }
+
+    // Other errors - return null
+    return null;
+  }
+
+  return null;
+}
+
+/**
  * Fetch live weekly downloads from npm API
  * No caching - Cloudflare caches final API responses
  * Uses 7-day range ending yesterday to avoid incomplete today data
@@ -236,11 +320,10 @@ export async function getWeeklyDownloads(packageName: string): Promise<number> {
     const startDate = getDateDaysAgo(7);
     const endDate = getDateDaysAgo(1);
 
-    const response = await fetch(
-      `https://api.npmjs.org/downloads/point/${startDate}:${endDate}/${encodeURIComponent(packageName)}`,
-    );
+    const url = `https://api.npmjs.org/downloads/point/${startDate}:${endDate}/${encodeURIComponent(packageName)}`;
+    const response = await fetchWithRetry(url);
 
-    if (!response.ok) return 0;
+    if (!response || !response.ok) return 0;
 
     const data = (await response.json()) as { downloads: number };
     return data.downloads;
