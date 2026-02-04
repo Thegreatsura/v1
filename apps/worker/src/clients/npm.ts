@@ -2,14 +2,18 @@
  * npm Registry API Client for Worker
  *
  * Re-exports from @v1/data/npm with worker-specific additions.
+ * Includes Redis-cached versions of download fetching.
  */
+
+import { fetchDownloadsBatch } from "@v1/data/npm";
+import { getCachedDownloadsBatch, setCachedDownloadsBatch } from "../lib/redis-cache";
 
 // Re-export everything from shared package
 // Re-export batch function with original name for backwards compatibility
 export {
   checkTypesPackage,
   fetchDownloads as fetchSingleDownloads,
-  fetchDownloadsBatch as fetchDownloads,
+  fetchDownloadsBatch as fetchDownloadsUncached,
   fetchPackageMetadata,
   getAuthorName,
   getDeprecationMessage,
@@ -25,6 +29,45 @@ export {
   type NpmPackageMetadata,
   type NpmVersionData,
 } from "@v1/data/npm";
+
+/**
+ * Fetch downloads with Redis cache (24h TTL)
+ *
+ * 1. Check Redis for cached values
+ * 2. Fetch missing from npm API
+ * 3. Store fresh values in Redis
+ * 4. Return merged results
+ */
+export async function fetchDownloads(names: string[]): Promise<Map<string, number>> {
+  if (names.length === 0) return new Map();
+
+  // 1. Check Redis cache for all names
+  const cached = await getCachedDownloadsBatch(names);
+
+  // 2. Find which ones are missing from cache
+  const missing = names.filter((name) => !cached.has(name));
+
+  if (missing.length === 0) {
+    // All found in cache
+    return cached;
+  }
+
+  // 3. Fetch missing from npm API
+  const fresh = await fetchDownloadsBatch(missing);
+
+  // 4. Store fresh values in Redis cache
+  if (fresh.size > 0) {
+    await setCachedDownloadsBatch(fresh);
+  }
+
+  // 5. Merge cached and fresh results
+  const results = new Map(cached);
+  for (const [name, count] of fresh) {
+    results.set(name, count);
+  }
+
+  return results;
+}
 
 /**
  * Batch check @types packages for multiple packages

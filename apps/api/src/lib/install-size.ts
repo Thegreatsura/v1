@@ -3,9 +3,11 @@
  *
  * Returns selfSize (package only) and totalSize (package + all transitive deps).
  * Uses BFS over the npm registry; safe for serverless (no filesystem).
+ * Cached for 7 days (size only changes when a new version is published).
  */
 
 import { maxSatisfying } from "semver";
+import { installSizeCache } from "./cache";
 
 const REGISTRY = "https://registry.npmjs.org";
 const MAX_PACKAGES = 500;
@@ -166,11 +168,19 @@ export interface InstallSizeResult {
 /**
  * Get install size for a package: self (unpacked) and total (self + all transitive deps).
  * If version is omitted, uses dist-tags.latest.
+ * Results are cached for 7 days (size only changes when a new version is published).
  */
 export async function getInstallSize(
   name: string,
   version?: string,
 ): Promise<InstallSizeResult | null> {
+  // Check cache first (keyed by name@version or name@latest)
+  const cacheKey = `installSize:${name}@${version || "latest"}`;
+  const cached = installSizeCache.get(cacheKey);
+  if (cached) {
+    return cached as InstallSizeResult;
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
   const signal = controller.signal;
@@ -199,11 +209,16 @@ export async function getInstallSize(
       }
     }
 
-    return {
+    const result: InstallSizeResult = {
       selfSize,
       totalSize,
       dependencyCount,
     };
+
+    // Cache the result for 7 days
+    installSizeCache.set(cacheKey, result);
+
+    return result;
   } catch {
     return null;
   } finally {

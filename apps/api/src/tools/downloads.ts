@@ -3,7 +3,7 @@
  *
  * Fetches download history from npm and aggregates into weekly data.
  * Uses multiple strategies to avoid rate limits:
- * 1. In-memory LRU cache (6 hour TTL)
+ * 1. In-memory LRU cache (24 hour TTL - downloads only update daily)
  * 2. Request throttling (max 10 concurrent requests)
  * 3. Retry with exponential backoff
  * 4. npm token authentication (increases rate limits when configured)
@@ -280,7 +280,7 @@ export async function getWeeklyDownloads(
       weeks: recentWeeks,
     };
 
-    // Cache successful result (6 hours TTL)
+    // Cache successful result (24 hours TTL - downloads only update daily)
     downloadsCache.set(cacheKey, result);
 
     return result;

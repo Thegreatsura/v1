@@ -2,8 +2,10 @@
  * Package Health Tool
  *
  * Comprehensive package assessment - one call returns everything an AI needs.
- * Always fetches live data from authoritative sources (npm, GitHub).
- * Typesense is only used for search/alternatives, not as data source.
+ * Fetches data from authoritative sources (npm, GitHub) with smart caching:
+ * - Downloads: Typesense first (already synced), npm API fallback
+ * - Metadata: npm registry (source of truth)
+ * - Alternatives: Typesense (search index)
  * Caching: Cloudflare edge cache handles all response caching (24h for health endpoint).
  */
 

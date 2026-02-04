@@ -181,4 +181,13 @@ export async function getPackages(names: string[]): Promise<Map<string, PackageD
   return results;
 }
 
+/**
+ * Get package downloads count from Typesense (fast, no rate limit)
+ * Returns null if package not found
+ */
+export async function getPackageDownloads(name: string): Promise<number | null> {
+  const doc = await getPackage(name);
+  return doc?.downloads ?? null;
+}
+
 export { typesenseClient };

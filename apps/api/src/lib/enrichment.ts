@@ -5,6 +5,8 @@
  * No caching here - Cloudflare caches final API responses.
  */
 
+import { getPackageDownloads } from "./clients/typesense";
+
 const NPM_REGISTRY = "https://registry.npmjs.org";
 const NPM_TOKEN = process.env.NPM_TOKEN;
 
@@ -310,11 +312,28 @@ async function fetchWithRetry(
 }
 
 /**
- * Fetch live weekly downloads from npm API
- * No caching - Cloudflare caches final API responses
- * Uses 7-day range ending yesterday to avoid incomplete today data
+ * Get weekly downloads - checks Typesense first, falls back to npm API
+ *
+ * Priority:
+ * 1. Typesense (already synced by worker, fast, no rate limit)
+ * 2. npm API (live data, subject to rate limits)
+ *
+ * @param packageName - Package name
+ * @param forceLive - If true, skip Typesense and fetch from npm directly
  */
-export async function getWeeklyDownloads(packageName: string): Promise<number> {
+export async function getWeeklyDownloads(
+  packageName: string,
+  forceLive = false,
+): Promise<number> {
+  // Check Typesense first (fast, no rate limit)
+  if (!forceLive) {
+    const typesenseDownloads = await getPackageDownloads(packageName);
+    if (typesenseDownloads !== null && typesenseDownloads > 0) {
+      return typesenseDownloads;
+    }
+  }
+
+  // Fall back to npm API for fresh data
   try {
     // Use date range: 7 days ago to yesterday (7 full days, excluding today)
     const startDate = getDateDaysAgo(7);
