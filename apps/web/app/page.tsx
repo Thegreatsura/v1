@@ -9,6 +9,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useSearch } from "@/lib/hooks";
 import { formatDownloads } from "@/lib/api";
 import { UserProfile } from "@/components/user-profile";
+import { TypesenseLogo } from "@/components/typesense-logo";
 
 export default function Home() {
   const [query, setQuery] = useState("");
@@ -215,62 +216,77 @@ export default function Home() {
 
             {/* Instant search results */}
             {isOpen && query.trim() && (
-              <div
-                ref={resultsRef}
-                className="absolute top-full left-0 right-0 mt-1 border border-border bg-background/95 z-20 max-h-[50vh] sm:max-h-[280px] overflow-y-auto backdrop-blur-sm"
-              >
-                {results.length > 0 ? (
-                  results.map((result, index) => (
-                    <Link
-                      key={result.name}
-                      href={`/${encodeURIComponent(result.name)}`}
-                      prefetch={true}
-                      className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                        index === selectedIndex
-                          ? "bg-surface text-foreground"
-                          : "text-muted hover:bg-surface/50"
-                      }`}
-                      onMouseEnter={() => {
-                        setSelectedIndex(index);
-                        router.prefetch(`/${encodeURIComponent(result.name)}`);
-                      }}
-                      onClick={() => clearSearch()}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={
-                              index === selectedIndex ? "text-foreground" : "text-foreground/80"
-                            }
-                          >
-                            {result.name}
-                          </span>
-                          <span className="text-subtle text-xs">v{result.version}</span>
-                          {result.hasTypes && (
-                            <span className="text-[10px] text-blue-500 dark:text-blue-400 border border-blue-500/30 dark:border-blue-400/30 px-1">
-                              TS
+              <div className="absolute top-full left-0 right-0 mt-1 border border-border bg-background/95 z-20 backdrop-blur-sm flex flex-col max-h-[50vh] sm:max-h-[300px]">
+                <div ref={resultsRef} className="flex-1 overflow-y-auto">
+                  {results.length > 0 ? (
+                    results.map((result, index) => (
+                      <Link
+                        key={result.name}
+                        href={`/${encodeURIComponent(result.name)}`}
+                        prefetch={true}
+                        className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                          index === selectedIndex
+                            ? "bg-surface text-foreground"
+                            : "text-muted hover:bg-surface/50"
+                        }`}
+                        onMouseEnter={() => {
+                          setSelectedIndex(index);
+                          router.prefetch(`/${encodeURIComponent(result.name)}`);
+                        }}
+                        onClick={() => clearSearch()}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={
+                                index === selectedIndex ? "text-foreground" : "text-foreground/80"
+                              }
+                            >
+                              {result.name}
                             </span>
+                            <span className="text-subtle text-xs">v{result.version}</span>
+                            {result.hasTypes && (
+                              <span className="text-[10px] text-blue-500 dark:text-blue-400 border border-blue-500/30 dark:border-blue-400/30 px-1">
+                                TS
+                              </span>
+                            )}
+                          </div>
+                          {result.description && (
+                            <p className="text-muted text-xs truncate mt-0.5">
+                              {result.description}
+                            </p>
                           )}
                         </div>
-                        {result.description && (
-                          <p className="text-muted text-xs truncate mt-0.5">{result.description}</p>
-                        )}
-                      </div>
-                      <div className="text-subtle text-xs whitespace-nowrap">
-                        {formatDownloads(result.downloads)}/wk
-                      </div>
-                    </Link>
-                  ))
-                ) : hasSearched && !isLoading ? (
-                  <div className="px-4 py-6 text-center">
-                    <p className="text-muted text-sm">No packages found for "{query}"</p>
-                    <p className="text-subtle text-xs mt-1">Press Enter to search on npm</p>
-                  </div>
-                ) : (
-                  <div className="px-4 py-4 text-center">
-                    <p className="text-subtle text-sm">Searching...</p>
-                  </div>
-                )}
+                        <div className="text-subtle text-xs whitespace-nowrap">
+                          {formatDownloads(result.downloads)}/wk
+                        </div>
+                      </Link>
+                    ))
+                  ) : hasSearched && !isLoading ? (
+                    <div className="px-4 py-6 text-center">
+                      <p className="text-muted text-sm">No packages found for "{query}"</p>
+                      <p className="text-subtle text-xs mt-1">Press Enter to search on npm</p>
+                    </div>
+                  ) : (
+                    <div className="px-4 py-4 text-center">
+                      <p className="text-subtle text-sm">Searching...</p>
+                    </div>
+                  )}
+                </div>
+                {/* Powered by Typesense */}
+                <div className="border-t border-border px-4 py-2 flex items-center justify-center text-xs text-faint">
+                  <span className="flex items-center gap-1.5">
+                    Powered by{" "}
+                    <a
+                      href="https://typesense.org?utm_source=v1.run&utm_medium=referral&utm_campaign=search"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-muted hover:text-foreground transition-colors"
+                    >
+                      <TypesenseLogo />
+                    </a>
+                  </span>
+                </div>
               </div>
             )}
           </div>

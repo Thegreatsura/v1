@@ -6,6 +6,7 @@ import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui
 import { Spinner } from "@/components/ui/spinner";
 import { useSearch } from "@/lib/hooks";
 import { formatDownloads } from "@/lib/api";
+import { TypesenseLogo } from "@/components/typesense-logo";
 
 // Popular packages to show by default
 const POPULAR_PACKAGES = [
@@ -231,7 +232,7 @@ function CommandSearch({ open, setOpen }: CommandSearchProps) {
             </div>
 
             {/* Results - responsive height */}
-            <CommandList className="h-[60vh] sm:h-[400px] max-h-[400px] overflow-y-auto scrollbar-none p-2">
+            <CommandList className="h-[50vh] sm:h-[320px] max-h-[320px] overflow-y-auto scrollbar-none p-2">
               {isLoading ? (
                 <div className="py-12 flex items-center justify-center gap-2 text-sm text-muted">
                   <Spinner /> searching
@@ -275,13 +276,17 @@ function CommandSearch({ open, setOpen }: CommandSearchProps) {
             </CommandList>
 
             {/* Footer hint */}
-            <div className="border-t border-border px-4 py-2 flex items-center justify-between text-xs text-faint">
-              <span>Type to search packages</span>
-              <span>
-                <kbd className="px-1.5 py-0.5 bg-surface border border-border rounded text-[10px]">
-                  esc
-                </kbd>{" "}
-                to close
+            <div className="border-t border-border px-4 py-2 flex items-center justify-center text-xs text-faint">
+              <span className="flex items-center gap-1.5">
+                Powered by{" "}
+                <a
+                  href="https://typesense.org?utm_source=v1.run&utm_medium=referral&utm_campaign=search"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-muted hover:text-foreground transition-colors"
+                >
+                  <TypesenseLogo />
+                </a>
               </span>
             </div>
           </Command>
