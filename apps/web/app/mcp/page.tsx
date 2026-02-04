@@ -24,9 +24,10 @@ export const metadata: Metadata = {
   },
 };
 
-// Cursor deeplink - config is base64 encoded JSON: {"url":"https://api.v1.run/mcp"}
+// Cursor deeplink - config is base64 encoded JSON: {"url":"https://mcp.v1.run/mcp"}
+// Note: Using mcp.v1.run subdomain to bypass Cloudflare SSE timeout
 const CURSOR_DEEPLINK =
-  "cursor://anysphere.cursor-deeplink/mcp/install?name=v1&config=eyJ1cmwiOiJodHRwczovL2FwaS52MS5ydW4vbWNwIn0=";
+  "cursor://anysphere.cursor-deeplink/mcp/install?name=v1&config=eyJ1cmwiOiJodHRwczovL21jcC52MS5ydW4vbWNwIn0=";
 
 export default function MCPPage() {
   return (
@@ -98,7 +99,7 @@ export default function MCPPage() {
               {`{
   "mcpServers": {
     "v1": {
-      "url": "https://api.v1.run/mcp"
+      "url": "https://mcp.v1.run/mcp"
     }
   }
 }`}
@@ -201,7 +202,7 @@ export default function MCPPage() {
           <h2 className="text-xs uppercase tracking-widest text-subtle mb-4">Links</h2>
           <div className="space-y-2 text-sm">
             <Link
-              href="https://api.v1.run/mcp"
+              href="https://mcp.v1.run/mcp"
               target="_blank"
               className="block text-muted hover:text-foreground transition-colors"
             >

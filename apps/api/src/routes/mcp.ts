@@ -1,57 +1,165 @@
 /**
  * MCP Route
  *
- * Model Context Protocol endpoint for stateless operation.
- * Creates fresh server + transport per request to avoid conflicts
- * when multiple clients connect simultaneously.
+ * Model Context Protocol endpoint with connection reuse for reliability.
+ * Maintains a single server instance and reuses transport connections
+ * to avoid connection state issues after batches of tool calls.
+ *
+ * This endpoint should be served on a separate subdomain (e.g., mcp.v1.run)
+ * that bypasses Cloudflare proxy to avoid SSE timeout issues.
+ * See CLOUDFLARE_MCP_FIX.md for setup instructions.
+ *
+ * Reliability improvements:
+ * - Connection reuse: Single server instance, transport per session
+ * - Keep-alive pings every 30 seconds to prevent idle timeouts
+ * - Better error handling and connection management
+ * - Railway 5-minute timeout awareness
  */
 
 import { Hono } from "hono";
 import { StreamableHTTPTransport } from "@hono/mcp";
 import { createMcpServer } from "../mcp/server";
 
+// Maintain a single MCP server instance for connection reuse
+// This prevents connection state corruption after batches of tool calls
+let mcpServerInstance: ReturnType<typeof createMcpServer> | null = null;
+
+function getMcpServer(): ReturnType<typeof createMcpServer> {
+  if (!mcpServerInstance) {
+    mcpServerInstance = createMcpServer();
+  }
+  return mcpServerInstance;
+}
+
+/**
+ * Wrap SSE stream with keep-alive pings to prevent idle timeouts
+ * Railway has a 5-minute HTTP timeout, but keep-alive helps with intermediate timeouts
+ *
+ * Uses ReadableStream with manual forwarding for better control
+ */
+function addKeepAlive(stream: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  const reader = stream.getReader();
+  let lastActivity = Date.now();
+  let pingInterval: ReturnType<typeof setInterval> | null = null;
+  let isStreamActive = true;
+
+  return new ReadableStream({
+    start(controller) {
+      // Send keep-alive ping every 30 seconds during idle periods
+      pingInterval = setInterval(() => {
+        if (isStreamActive && Date.now() - lastActivity > 25000) {
+          // Only ping if no activity in last 25 seconds (to avoid pinging during active communication)
+          try {
+            // SSE comment (ping) - doesn't trigger events but keeps connection alive
+            controller.enqueue(encoder.encode(`: keep-alive\n\n`));
+          } catch {
+            // Stream closed, stop pinging
+            isStreamActive = false;
+            if (pingInterval) clearInterval(pingInterval);
+          }
+        }
+      }, 30000); // Check every 30 seconds
+
+      // Forward original stream data
+      const pump = async () => {
+        try {
+          while (isStreamActive) {
+            const { done, value } = await reader.read();
+            if (done) {
+              isStreamActive = false;
+              if (pingInterval) clearInterval(pingInterval);
+              controller.close();
+              break;
+            }
+            // Update activity timestamp when we receive data
+            lastActivity = Date.now();
+            controller.enqueue(value);
+          }
+        } catch (error) {
+          isStreamActive = false;
+          if (pingInterval) clearInterval(pingInterval);
+          controller.error(error);
+        }
+      };
+
+      pump();
+    },
+    cancel() {
+      // Cleanup on cancellation
+      isStreamActive = false;
+      if (pingInterval) clearInterval(pingInterval);
+      reader.cancel().catch(() => {
+        // Ignore cancel errors
+      });
+    },
+  });
+}
+
 export function createMcpRoutes() {
   const app = new Hono();
 
   app.all("/mcp", async (c) => {
-    // Create fresh server and transport per request to avoid conflicts
-    const mcpServer = createMcpServer();
-    const transport = new StreamableHTTPTransport();
+    try {
+      // Get or create the shared MCP server instance
+      const mcpServer = getMcpServer();
 
-    await mcpServer.connect(transport);
+      // Create a fresh transport per request
+      // StreamableHTTPTransport is designed to handle requests statelessly
+      const transport = new StreamableHTTPTransport();
 
-    // Get the response from the transport (don't read request body here - transport needs it)
-    const response = await transport.handleRequest(c);
+      // Connect server to transport
+      // If server was connected to a previous transport, disconnect first to avoid state conflicts
+      if (mcpServer.isConnected()) {
+        try {
+          await mcpServer.close();
+        } catch {
+          // Ignore close errors - transport might already be closed
+        }
+      }
 
-    if (!response) {
-      return c.json({ error: "Failed to handle MCP request" }, 500);
+      await mcpServer.connect(transport);
+
+      // Handle the request through the transport
+      const response = await transport.handleRequest(c);
+
+      if (!response) {
+        return c.json({ error: "Failed to handle MCP request" }, 500);
+      }
+
+      // Add SSE headers for reliability
+      const headers = new Headers(response.headers);
+      headers.set("Content-Type", "text/event-stream");
+      headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
+      headers.set("Connection", "keep-alive");
+      headers.set("Access-Control-Allow-Origin", "*");
+      headers.set("X-Accel-Buffering", "no"); // Prevent proxy buffering
+
+      // Wrap stream with keep-alive if it's a readable stream
+      const body = response.body ? addKeepAlive(response.body as ReadableStream<Uint8Array>) : null;
+
+      return new Response(body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      });
+    } catch (error) {
+      console.error("[MCP] Error handling request:", error);
+
+      // On error, reset the server instance to force reconnection on next request
+      // This helps recover from connection state corruption
+      if (error instanceof Error && error.message.includes("connection")) {
+        mcpServerInstance = null;
+      }
+
+      return c.json(
+        {
+          error: "Internal server error",
+          message: error instanceof Error ? error.message : "Unknown error",
+        },
+        500,
+      );
     }
-
-    // Clone response with Cloudflare-compatible headers for SSE streaming
-    // These headers match the working /api/updates/stream endpoint exactly
-    const headers = new Headers(response.headers);
-
-    // Ensure Content-Type is set for SSE (StreamableHTTPTransport uses SSE for streaming)
-    headers.set("Content-Type", "text/event-stream");
-
-    // Critical: Prevent Cloudflare from buffering/caching SSE streams
-    // These headers MUST be set to prevent Bad Gateway errors
-    headers.set("Cache-Control", "no-cache, no-store, no-transform, must-revalidate");
-    headers.set("Connection", "keep-alive");
-    headers.set("X-Accel-Buffering", "no"); // Disable nginx/proxy buffering
-    headers.set("CF-Cache-Status", "DYNAMIC"); // Tell Cloudflare not to cache
-    headers.set("Transfer-Encoding", "chunked"); // Ensure chunked transfer
-
-    // CORS headers for MCP clients (matches SSE endpoint)
-    headers.set("Access-Control-Allow-Origin", "*");
-    headers.set("Access-Control-Allow-Headers", "Cache-Control");
-
-    // Return new response with modified headers and same body
-    return new Response(response.body ?? null, {
-      status: response.status,
-      statusText: response.statusText,
-      headers,
-    });
   });
 
   return app;

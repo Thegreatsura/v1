@@ -283,6 +283,9 @@ If auto-import doesn't work:
 |--------|------|--------|-------|
 | CNAME | `@` | `your-web-app.up.railway.app` | Proxied |
 | CNAME | `api` | `your-api-app.up.railway.app` | Proxied |
+| CNAME | `mcp` | `your-api-app.up.railway.app` | **DNS Only** (gray cloud) |
+
+**Note**: The `mcp` subdomain must be DNS-only (not proxied) to bypass Cloudflare's 100-second SSE timeout. See `apps/api/CLOUDFLARE_MCP_FIX.md` for details.
 
 ### Cloudflare Settings
 
@@ -299,7 +302,9 @@ If auto-import doesn't work:
 1. In Railway, go to Web service → **Settings** → **Networking**
 2. Click **Add Custom Domain**
 3. Enter your domain (e.g., `v1.run`)
-4. Repeat for API service with subdomain (e.g., `api.v1.run`)
+4. For API service, add two custom domains:
+   - `api.v1.run` (for REST API endpoints with Cloudflare caching)
+   - `mcp.v1.run` (for MCP endpoint, bypasses Cloudflare to avoid SSE timeout)
 
 ## Verification
 

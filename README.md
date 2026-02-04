@@ -43,8 +43,17 @@ v1.run/
 
 For AI coding assistants (Cursor, Claude, etc.):
 
-```bash
-npx @packages-run/mcp-server
+**Endpoint**: `https://mcp.v1.run/mcp`
+
+**Configuration** (for Cursor, Claude Desktop, etc.):
+```json
+{
+  "mcpServers": {
+    "v1": {
+      "url": "https://mcp.v1.run/mcp"
+    }
+  }
+}
 ```
 
 **Tools:**
