@@ -7,8 +7,8 @@
 
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { db } from "./db";
-import * as schema from "./auth-schema";
+import { db } from "@v1/db/client";
+import * as schema from "@v1/db/schema";
 
 const isProduction = process.env.BETTER_AUTH_URL?.includes("v1.run");
 

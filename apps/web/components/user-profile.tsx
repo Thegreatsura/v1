@@ -15,9 +15,11 @@ import {
 export function UserProfile() {
   const { data: session, isPending } = useSession();
 
-  // Fixed-width container to prevent layout shift
+  // Only use min-width when showing "Sign in" to prevent layout shift
+  const needsMinWidth = !isPending && !session?.user;
+
   return (
-    <div className="flex items-center justify-end min-w-[70px] h-6">
+    <div className={`flex items-center justify-end h-6 ${needsMinWidth ? "min-w-[70px]" : ""}`}>
       {isPending ? (
         <div className="w-6 h-6 bg-surface/50 animate-pulse" />
       ) : !session?.user ? (
@@ -28,7 +30,7 @@ export function UserProfile() {
           Sign in
         </button>
       ) : (
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <button className="focus:outline-none">
               {session.user.image ? (
@@ -37,7 +39,7 @@ export function UserProfile() {
                   alt={session.user.name || "User"}
                   width={24}
                   height={24}
-                  className="border border-border hover:border-foreground transition-colors"
+                  className="border border-border"
                   unoptimized
                 />
               ) : (
@@ -47,10 +49,7 @@ export function UserProfile() {
               )}
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent 
-            align="end" 
-            className="min-w-[140px] bg-background border-border"
-          >
+          <DropdownMenuContent align="end" className="min-w-[140px] bg-background border-border">
             <DropdownMenuLabel className="font-normal px-2 py-1.5">
               <div className="flex flex-col gap-0.5">
                 <p className="text-xs font-medium text-foreground">{session.user.name}</p>
@@ -58,11 +57,14 @@ export function UserProfile() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-border" />
-            <DropdownMenuItem asChild className="text-xs text-muted hover:text-foreground hover:bg-surface cursor-pointer">
+            <DropdownMenuItem
+              asChild
+              className="text-xs text-muted hover:text-foreground hover:bg-surface cursor-pointer"
+            >
               <Link href="/profile">Profile</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-border" />
-            <DropdownMenuItem 
+            <DropdownMenuItem
               onClick={() => signOut()}
               className="text-xs text-muted hover:text-foreground hover:bg-surface cursor-pointer"
             >

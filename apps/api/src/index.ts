@@ -18,6 +18,9 @@ import {
   createMcpRoutes,
   createPackageRoutes,
   createUpdatesRoutes,
+  createNotificationsRoutes,
+  createIntegrationsRoutes,
+  createUnsubscribeRoutes,
 } from "./routes/index";
 
 // =============================================================================
@@ -47,7 +50,7 @@ app.use(
       if (origin?.endsWith(".v1.run") || origin === "https://v1.run") return origin;
       return origin || "*";
     },
-    allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
+    allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Cache-Control"],
     credentials: true,
   }),
@@ -68,6 +71,15 @@ app.route("/", createCompareRoutes());
 
 // Favorites routes (authenticated)
 app.route("/", createFavoritesRoutes());
+
+// Notifications routes (authenticated)
+app.route("/", createNotificationsRoutes());
+
+// Integrations routes (authenticated)
+app.route("/", createIntegrationsRoutes());
+
+// Unsubscribe routes (public)
+app.route("/", createUnsubscribeRoutes());
 
 // MCP endpoint
 app.route("/", createMcpRoutes());
@@ -100,6 +112,8 @@ app.doc("/openapi.json", {
     { name: "Compare", description: "Package comparison and alternatives" },
     { name: "Search", description: "Package search" },
     { name: "Favorites", description: "User favorites management" },
+    { name: "Notifications", description: "Package update notifications" },
+    { name: "Integrations", description: "External integrations (Slack, etc.)" },
     { name: "Account", description: "User account management" },
   ],
 });

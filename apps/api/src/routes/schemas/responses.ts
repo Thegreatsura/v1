@@ -406,6 +406,92 @@ export const FavoriteCheckResponseSchema = z
   .openapi("FavoriteCheckResponse");
 
 // =============================================================================
+// Notifications
+// =============================================================================
+
+export const NotificationSchema = z.object({
+  id: z.string(),
+  packageName: z.string(),
+  newVersion: z.string(),
+  previousVersion: z.string().nullable(),
+  severity: z.enum(["critical", "important", "info"]),
+  isSecurityUpdate: z.boolean(),
+  isBreakingChange: z.boolean(),
+  changelogSnippet: z.string().nullable(),
+  vulnerabilitiesFixed: z.number().nullable(),
+  read: z.boolean(),
+  createdAt: z.string(),
+});
+
+export const NotificationsListResponseSchema = z
+  .object({
+    notifications: z.array(NotificationSchema),
+    total: z.number(),
+    unreadCount: z.number(),
+  })
+  .openapi("NotificationsListResponse");
+
+export const UnreadCountResponseSchema = z
+  .object({
+    total: z.number(),
+    critical: z.number(),
+  })
+  .openapi("UnreadCountResponse");
+
+export const NotificationPreferencesSchema = z.object({
+  notifyAllUpdates: z.boolean(),
+  notifyMajorOnly: z.boolean(),
+  notifySecurityOnly: z.boolean(),
+  inAppEnabled: z.boolean(),
+  slackEnabled: z.boolean(),
+  emailDigestEnabled: z.boolean(),
+  emailDigestFrequency: z.enum(["daily", "weekly"]).nullable(),
+  emailImmediateCritical: z.boolean(),
+});
+
+export const NotificationPreferencesResponseSchema = z
+  .object({
+    preferences: NotificationPreferencesSchema,
+  })
+  .openapi("NotificationPreferencesResponse");
+
+// =============================================================================
+// Integrations
+// =============================================================================
+
+export const IntegrationSchema = z.object({
+  id: z.string(),
+  provider: z.string(),
+  displayName: z.string(),
+  enabled: z.boolean(),
+  createdAt: z.string(),
+});
+
+export const IntegrationsListResponseSchema = z
+  .object({
+    integrations: z.array(IntegrationSchema),
+  })
+  .openapi("IntegrationsListResponse");
+
+export const SlackChannelSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  isPrivate: z.boolean(),
+});
+
+export const SlackChannelsResponseSchema = z
+  .object({
+    channels: z.array(SlackChannelSchema),
+  })
+  .openapi("SlackChannelsResponse");
+
+export const SlackConnectResponseSchema = z
+  .object({
+    url: z.string(),
+  })
+  .openapi("SlackConnectResponse");
+
+// =============================================================================
 // Compare API (complex)
 // =============================================================================
 

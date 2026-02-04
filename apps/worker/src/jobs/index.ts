@@ -10,6 +10,9 @@ import {
   type SyncJobData,
 } from "@v1/queue/npm-sync";
 import { processBulkSyncJob, processSyncJob } from "./npm-sync";
+import { createSlackDeliveryWorker } from "./slack-delivery";
+import { createEmailDeliveryWorker } from "./email-delivery";
+import { createEmailDigestWorker, initializeDigestScheduler } from "./email-digest";
 
 export { getCombinedStats as getQueueStats } from "./npm-sync";
 
@@ -22,6 +25,16 @@ export function createWorkers() {
   const bulkSyncWorker = createWorker<BulkSyncJobData>(NPM_BULK_SYNC_QUEUE, processBulkSyncJob, {
     concurrency: 2,
     limiter: { max: 50, duration: 60000 },
+  });
+
+  // Notification delivery workers
+  const slackWorker = createSlackDeliveryWorker();
+  const emailWorker = createEmailDeliveryWorker();
+  const digestWorker = createEmailDigestWorker();
+
+  // Initialize digest scheduler (schedules daily/weekly digest jobs)
+  initializeDigestScheduler().catch((error) => {
+    console.error("Failed to initialize digest scheduler:", error);
   });
 
   syncWorker.on("failed", (job, error) => {
@@ -44,12 +57,30 @@ export function createWorkers() {
     console.error("Bulk sync worker error:", error);
   });
 
+  slackWorker.on("failed", (job, error) => {
+    console.error(`[Slack ${job?.id}] Failed:`, error.message);
+  });
+
+  emailWorker.on("failed", (job, error) => {
+    console.error(`[Email ${job?.id}] Failed:`, error.message);
+  });
+
+  digestWorker.on("failed", (job, error) => {
+    console.error(`[Digest ${job?.id}] Failed:`, error.message);
+  });
+
   return {
     syncWorker,
     bulkSyncWorker,
+    slackWorker,
+    emailWorker,
+    digestWorker,
     async close() {
       await syncWorker.close();
       await bulkSyncWorker.close();
+      await slackWorker.close();
+      await emailWorker.close();
+      await digestWorker.close();
     },
   };
 }

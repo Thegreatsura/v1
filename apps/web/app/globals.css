@@ -106,6 +106,17 @@ html.light {
     padding: 0;
   }
 
+  /* Prevent Radix scroll-lock from causing layout shift */
+  html[data-scroll-locked] {
+    margin-right: 0 !important;
+    overflow-y: scroll !important;
+  }
+
+  body[data-scroll-locked] {
+    margin-right: 0 !important;
+    padding-right: 0 !important;
+  }
+
   /* Selection - dark mode */
   html.dark ::selection {
     background: #ffffff;

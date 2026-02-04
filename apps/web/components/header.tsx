@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { SearchTrigger } from "@/components/command-search";
+import { NotificationBell } from "@/components/notification-bell";
 import { UserProfile } from "@/components/user-profile";
 
 export function Header() {
@@ -30,6 +31,7 @@ export function Header() {
         >
           MCP
         </Link>
+        <NotificationBell />
         <UserProfile />
       </div>
     </header>

@@ -9,6 +9,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useSearch } from "@/lib/hooks";
 import { formatDownloads } from "@/lib/api";
 import { UserProfile } from "@/components/user-profile";
+import { NotificationBell } from "@/components/notification-bell";
 import { TypesenseLogo } from "@/components/typesense-logo";
 
 export default function Home() {
@@ -156,8 +157,9 @@ export default function Home() {
       {/* Screen flicker */}
       <div className="screen-flicker" />
 
-      {/* User profile - top right */}
-      <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20">
+      {/* User profile & notifications - top right */}
+      <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 flex items-center gap-2">
+        <NotificationBell />
         <UserProfile />
       </div>
 
