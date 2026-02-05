@@ -1,15 +1,15 @@
 /**
  * Notification Dispatcher
  *
- * Creates notifications for users who favorited a package and
+ * Creates notifications for users who follow a package and
  * dispatches to appropriate channels (in-app, email).
  */
 
 import { db } from "@packrun/db/client";
 import {
-  getUsersWithFavoritesForPackage,
+  getUsersFollowingPackage,
   insertNotification,
-  type UserWithFavoriteAndPreferences,
+  type UserWithFollowAndPreferences,
 } from "@packrun/db/queries";
 import { getQueue } from "@packrun/queue";
 import {
@@ -43,7 +43,7 @@ interface NotificationData {
  * Check if user wants to be notified based on their preferences
  */
 function shouldNotifyUser(
-  prefs: UserWithFavoriteAndPreferences,
+  prefs: UserWithFollowAndPreferences,
   severity: string,
   isSecurityUpdate: boolean,
 ): boolean {
@@ -61,7 +61,7 @@ function shouldNotifyUser(
 /**
  * Dispatch notifications for a package update
  *
- * 1. Find all users who favorited the package
+ * 1. Find all users who follow the package
  * 2. Filter by user preferences
  * 3. Create in-app notifications
  * 4. Queue immediate emails (critical only)
@@ -89,10 +89,10 @@ export async function dispatchNotifications(
   };
 
   try {
-    // Find users who favorited this package along with their preferences
-    const usersWithFavorites = await getUsersWithFavoritesForPackage(db, packageName);
+    // Find users who follow this package along with their preferences
+    const usersFollowing = await getUsersFollowingPackage(db, packageName);
 
-    if (usersWithFavorites.length === 0) {
+    if (usersFollowing.length === 0) {
       return { notified: 0, skipped: 0 };
     }
 
@@ -100,7 +100,7 @@ export async function dispatchNotifications(
     let skipped = 0;
 
     // Process each user
-    for (const userPrefs of usersWithFavorites) {
+    for (const userPrefs of usersFollowing) {
       // Check if user wants this notification
       if (
         !shouldNotifyUser(userPrefs, notificationData.severity, notificationData.isSecurityUpdate)

@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { Footer } from "@/components/footer";
+import { Header } from "@/components/header";
 import { signOut, useSession } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc/query";
 
@@ -183,26 +185,26 @@ function ProfileContent() {
     }
   }, [searchParams]);
 
-  // Fetch favorites
-  const { data: favoritesData, isLoading: favoritesLoading } = useQuery({
-    ...orpc.favorites.list.queryOptions(),
+  // Fetch followed packages
+  const { data: followingData, isLoading: followingLoading } = useQuery({
+    ...orpc.following.list.queryOptions(),
     enabled: !!session?.user,
   });
-  const favorites = favoritesData?.favorites ?? [];
+  const following = followingData?.following ?? [];
 
-  // Remove favorite mutation
-  const removeFavoriteMutation = useMutation({
-    ...orpc.favorites.remove.mutationOptions(),
+  // Unfollow mutation
+  const unfollowMutation = useMutation({
+    ...orpc.following.unfollow.mutationOptions(),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: orpc.favorites.list.queryOptions().queryKey,
+        queryKey: orpc.following.list.queryOptions().queryKey,
       });
     },
   });
 
   // Delete account mutation
   const deleteAccountMutation = useMutation({
-    ...orpc.favorites.deleteAccount.mutationOptions(),
+    ...orpc.following.deleteAccount.mutationOptions(),
     onSuccess: () => {
       signOut();
     },
@@ -234,160 +236,163 @@ function ProfileContent() {
   };
 
   return (
-    <div className="min-h-screen p-4 sm:p-8 max-w-2xl mx-auto">
-      <Link href="/" className="text-xs text-subtle hover:text-foreground transition-colors">
-        ← Back
-      </Link>
+    <main className="min-h-screen bg-background text-foreground font-mono flex flex-col">
+      <Header />
 
-      <h1 className="text-xl font-bold mt-6 mb-6">Profile</h1>
+      <div className="container-page py-8 flex-1">
+        <h1 className="text-2xl font-bold mb-6">Profile</h1>
 
-      {/* Tabs */}
-      <div className="flex gap-4 border-b border-border mb-6">
-        <button
-          onClick={() => setActiveTab("profile")}
-          className={`pb-2 text-sm transition-colors ${
-            activeTab === "profile"
-              ? "text-foreground border-b-2 border-foreground"
-              : "text-muted hover:text-foreground"
-          }`}
-        >
-          Profile
-        </button>
-        <button
-          onClick={() => setActiveTab("notifications")}
-          className={`pb-2 text-sm transition-colors ${
-            activeTab === "notifications"
-              ? "text-foreground border-b-2 border-foreground"
-              : "text-muted hover:text-foreground"
-          }`}
-        >
-          Notifications
-        </button>
+        {/* Tabs */}
+        <div className="flex gap-4 border-b border-border mb-6">
+          <button
+            onClick={() => setActiveTab("profile")}
+            className={`pb-2 text-sm transition-colors ${
+              activeTab === "profile"
+                ? "text-foreground border-b-2 border-foreground"
+                : "text-muted hover:text-foreground"
+            }`}
+          >
+            Profile
+          </button>
+          <button
+            onClick={() => setActiveTab("notifications")}
+            className={`pb-2 text-sm transition-colors ${
+              activeTab === "notifications"
+                ? "text-foreground border-b-2 border-foreground"
+                : "text-muted hover:text-foreground"
+            }`}
+          >
+            Notifications
+          </button>
+        </div>
+
+        {activeTab === "profile" ? (
+          <>
+            {/* User Info */}
+            <section className="border border-border p-6 mb-6">
+              <div className="flex items-center gap-4">
+                {session.user.image && (
+                  <Image
+                    src={session.user.image}
+                    alt={session.user.name || "User"}
+                    width={64}
+                    height={64}
+                    className="border border-border"
+                    unoptimized
+                    loading="eager"
+                  />
+                )}
+                <div>
+                  <p className="font-medium">{session.user.name}</p>
+                  <p className="text-sm text-muted">{session.user.email}</p>
+                </div>
+              </div>
+              <div className="mt-4 pt-4 border-t border-border">
+                <p className="text-xs text-subtle">Connected via GitHub</p>
+              </div>
+            </section>
+
+            {/* Following */}
+            <section className="border border-border p-6 mb-6">
+              <h2 className="text-sm font-medium mb-4">Following</h2>
+              {followingLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-8 bg-surface/50 animate-pulse" />
+                  ))}
+                </div>
+              ) : following.length === 0 ? (
+                <p className="text-sm text-muted">
+                  Not following any packages yet. Browse packages and click Follow to get notified
+                  about updates.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {following.map((pkg) => (
+                    <li key={pkg} className="flex items-center justify-between group">
+                      <Link
+                        href={`/${encodeURIComponent(pkg)}`}
+                        className="text-sm text-muted hover:text-foreground transition-colors"
+                      >
+                        {pkg}
+                      </Link>
+                      <button
+                        onClick={() => unfollowMutation.mutate({ name: pkg })}
+                        disabled={unfollowMutation.isPending}
+                        className="text-xs text-subtle hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        unfollow
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            {/* Account Settings */}
+            <section className="border border-border p-6">
+              <h2 className="text-sm font-medium mb-4">Account</h2>
+
+              {!showDeleteConfirm ? (
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="text-xs text-subtle hover:text-red-500 transition-colors"
+                >
+                  Delete account
+                </button>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted">
+                    This will permanently delete your account and all your data. This action cannot
+                    be undone.
+                  </p>
+                  <div>
+                    <label htmlFor="delete-confirm" className="text-xs text-subtle block mb-2">
+                      Type "delete my account" to confirm:
+                    </label>
+                    <input
+                      id="delete-confirm"
+                      type="text"
+                      value={deleteConfirmText}
+                      onChange={(e) => setDeleteConfirmText(e.target.value)}
+                      className="w-full bg-transparent border border-border px-3 py-2 text-sm focus:outline-none focus:border-foreground"
+                      placeholder="delete my account"
+                    />
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleDeleteAccount}
+                      disabled={
+                        deleteConfirmText !== "delete my account" || deleteAccountMutation.isPending
+                      }
+                      className="text-xs px-3 py-1.5 bg-red-500/10 text-red-500 border border-red-500/30 hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {deleteAccountMutation.isPending ? "Deleting..." : "Delete my account"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowDeleteConfirm(false);
+                        setDeleteConfirmText("");
+                      }}
+                      className="text-xs text-subtle hover:text-foreground transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </section>
+          </>
+        ) : (
+          <section className="border border-border p-6">
+            <h2 className="text-sm font-medium mb-6">Notification Settings</h2>
+            <NotificationPreferencesSection />
+          </section>
+        )}
       </div>
 
-      {activeTab === "profile" ? (
-        <>
-          {/* User Info */}
-          <section className="border border-border p-6 mb-6">
-            <div className="flex items-center gap-4">
-              {session.user.image && (
-                <Image
-                  src={session.user.image}
-                  alt={session.user.name || "User"}
-                  width={64}
-                  height={64}
-                  className="border border-border"
-                  unoptimized
-                  loading="eager"
-                />
-              )}
-              <div>
-                <p className="font-medium">{session.user.name}</p>
-                <p className="text-sm text-muted">{session.user.email}</p>
-              </div>
-            </div>
-            <div className="mt-4 pt-4 border-t border-border">
-              <p className="text-xs text-subtle">Connected via GitHub</p>
-            </div>
-          </section>
-
-          {/* Favorites */}
-          <section className="border border-border p-6 mb-6">
-            <h2 className="text-sm font-medium mb-4">Favorite Packages</h2>
-            {favoritesLoading ? (
-              <div className="space-y-2">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-8 bg-surface/50 animate-pulse" />
-                ))}
-              </div>
-            ) : favorites.length === 0 ? (
-              <p className="text-sm text-muted">
-                No favorites yet. Browse packages and click the star to save them here.
-              </p>
-            ) : (
-              <ul className="space-y-2">
-                {favorites.map((pkg) => (
-                  <li key={pkg} className="flex items-center justify-between group">
-                    <Link
-                      href={`/${encodeURIComponent(pkg)}`}
-                      className="text-sm text-muted hover:text-foreground transition-colors"
-                    >
-                      {pkg}
-                    </Link>
-                    <button
-                      onClick={() => removeFavoriteMutation.mutate({ name: pkg })}
-                      disabled={removeFavoriteMutation.isPending}
-                      className="text-xs text-subtle hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      remove
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          {/* Account Settings */}
-          <section className="border border-border p-6">
-            <h2 className="text-sm font-medium mb-4">Account</h2>
-
-            {!showDeleteConfirm ? (
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="text-xs text-subtle hover:text-red-500 transition-colors"
-              >
-                Delete account
-              </button>
-            ) : (
-              <div className="space-y-4">
-                <p className="text-sm text-muted">
-                  This will permanently delete your account and all your data. This action cannot be
-                  undone.
-                </p>
-                <div>
-                  <label htmlFor="delete-confirm" className="text-xs text-subtle block mb-2">
-                    Type "delete my account" to confirm:
-                  </label>
-                  <input
-                    id="delete-confirm"
-                    type="text"
-                    value={deleteConfirmText}
-                    onChange={(e) => setDeleteConfirmText(e.target.value)}
-                    className="w-full bg-transparent border border-border px-3 py-2 text-sm focus:outline-none focus:border-foreground"
-                    placeholder="delete my account"
-                  />
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleDeleteAccount}
-                    disabled={
-                      deleteConfirmText !== "delete my account" || deleteAccountMutation.isPending
-                    }
-                    className="text-xs px-3 py-1.5 bg-red-500/10 text-red-500 border border-red-500/30 hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {deleteAccountMutation.isPending ? "Deleting..." : "Delete my account"}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowDeleteConfirm(false);
-                      setDeleteConfirmText("");
-                    }}
-                    className="text-xs text-subtle hover:text-foreground transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-          </section>
-        </>
-      ) : (
-        <section className="border border-border p-6">
-          <h2 className="text-sm font-medium mb-6">Notification Settings</h2>
-          <NotificationPreferencesSection />
-        </section>
-      )}
-    </div>
+      <Footer />
+    </main>
   );
 }
 

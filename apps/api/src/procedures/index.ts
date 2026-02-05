@@ -6,17 +6,19 @@
 
 export { adminRouter } from "./admin";
 export { compareRouter } from "./compare";
-export { favoritesRouter } from "./favorites";
+export { followRouter } from "./follow";
 export { notificationsRouter } from "./notifications";
 export { packageRouter } from "./package";
+export { releasesRouter } from "./releases";
 export { searchRouter } from "./search";
 
 import { adminRouter } from "./admin";
 import { compareRouter } from "./compare";
-import { favoritesRouter } from "./favorites";
+import { followRouter } from "./follow";
 import { notificationsRouter } from "./notifications";
 // Combined app router
 import { packageRouter } from "./package";
+import { releasesRouter } from "./releases";
 import { searchRouter } from "./search";
 
 /**
@@ -29,7 +31,8 @@ export const appRouter = {
   package: packageRouter,
   search: searchRouter,
   compare: compareRouter,
-  favorites: favoritesRouter,
+  following: followRouter,
+  releases: releasesRouter,
   notifications: notificationsRouter,
   admin: adminRouter,
 };
@@ -45,7 +48,8 @@ export const publicRouter = {
   package: packageRouter,
   search: searchRouter,
   compare: compareRouter,
-  favorites: favoritesRouter,
+  following: followRouter,
+  releases: releasesRouter,
   notifications: notificationsRouter,
 };
 

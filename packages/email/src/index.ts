@@ -13,3 +13,4 @@ export {
 
 export { CriticalAlert, type CriticalAlertProps } from "./templates/critical";
 export { Digest, type DigestProps, type DigestUpdate } from "./templates/digest";
+export { ReleaseLaunched, type ReleaseLaunchedProps } from "./templates/release-launched";

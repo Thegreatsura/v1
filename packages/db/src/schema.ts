@@ -96,11 +96,11 @@ export const verification = pgTable(
 );
 
 // =============================================================================
-// Favorites
+// Package Follow (users following packages for notifications)
 // =============================================================================
 
-export const favorite = pgTable(
-  "favorite",
+export const packageFollow = pgTable(
+  "package_follow",
   {
     id: text("id").primaryKey(),
     userId: text("user_id")
@@ -110,9 +110,74 @@ export const favorite = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
-    index("favorite_userId_idx").on(table.userId),
-    index("favorite_packageName_idx").on(table.packageName),
-    uniqueIndex("favorite_unique").on(table.userId, table.packageName),
+    index("packageFollow_userId_idx").on(table.userId),
+    index("packageFollow_packageName_idx").on(table.packageName),
+    uniqueIndex("packageFollow_unique").on(table.userId, table.packageName),
+  ],
+);
+
+// =============================================================================
+// Upcoming Releases
+// =============================================================================
+
+export const upcomingRelease = pgTable(
+  "upcoming_release",
+  {
+    id: text("id").primaryKey(),
+    packageName: text("package_name"), // nullable - can exist without linked package
+    title: text("title").notNull(), // e.g., "Drizzle v1.0"
+    description: text("description"), // markdown, features/highlights
+
+    // Version matching
+    targetVersion: text("target_version").notNull(), // e.g., "1.0.0" or "1.x"
+    versionMatchType: text("version_match_type").notNull().default("exact"), // "exact" | "major"
+
+    // Release tracking
+    releasedVersion: text("released_version"), // actual version when released
+    releasedAt: timestamp("released_at"), // when it actually released
+    status: text("status").notNull().default("upcoming"), // "upcoming" | "released"
+
+    // Display
+    logoUrl: text("logo_url"), // from logo.dev
+    websiteUrl: text("website_url"), // official announcement/docs link
+    expectedDate: timestamp("expected_date"), // optional expected release date
+
+    // Metadata
+    submittedById: text("submitted_by_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    featured: boolean("featured").default(false).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("upcomingRelease_packageName_idx").on(table.packageName),
+    index("upcomingRelease_status_idx").on(table.status),
+    index("upcomingRelease_packageStatus_idx").on(table.packageName, table.status),
+    index("upcomingRelease_submittedBy_idx").on(table.submittedById),
+    index("upcomingRelease_featured_idx").on(table.featured),
+  ],
+);
+
+export const releaseFollow = pgTable(
+  "release_follow",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    releaseId: text("release_id")
+      .notNull()
+      .references(() => upcomingRelease.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("releaseFollow_userId_idx").on(table.userId),
+    index("releaseFollow_releaseId_idx").on(table.releaseId),
+    uniqueIndex("releaseFollow_unique").on(table.userId, table.releaseId),
   ],
 );
 
@@ -187,15 +252,36 @@ export const notificationPreferences = pgTable("notification_preferences", {
 export const userRelations = relations(user, ({ many, one }) => ({
   accounts: many(account),
   sessions: many(session),
-  favorites: many(favorite),
+  packageFollows: many(packageFollow),
+  releaseFollows: many(releaseFollow),
+  submittedReleases: many(upcomingRelease),
   notifications: many(notification),
   notificationPreferences: one(notificationPreferences),
 }));
 
-export const favoriteRelations = relations(favorite, ({ one }) => ({
+export const packageFollowRelations = relations(packageFollow, ({ one }) => ({
   user: one(user, {
-    fields: [favorite.userId],
+    fields: [packageFollow.userId],
     references: [user.id],
+  }),
+}));
+
+export const upcomingReleaseRelations = relations(upcomingRelease, ({ one, many }) => ({
+  submittedBy: one(user, {
+    fields: [upcomingRelease.submittedById],
+    references: [user.id],
+  }),
+  followers: many(releaseFollow),
+}));
+
+export const releaseFollowRelations = relations(releaseFollow, ({ one }) => ({
+  user: one(user, {
+    fields: [releaseFollow.userId],
+    references: [user.id],
+  }),
+  release: one(upcomingRelease, {
+    fields: [releaseFollow.releaseId],
+    references: [upcomingRelease.id],
   }),
 }));
 

@@ -118,7 +118,7 @@ export function Layout({ previewText, children, unsubscribeUrl }: LayoutProps) {
             {/* Footer */}
             <Section className="pt-8 pb-8 px-5" style={{ borderTop: `1px solid ${colors.border}` }}>
               <Text className="text-[10px] leading-4 m-0 mb-1" style={{ color: colors.subtle }}>
-                You're receiving this because you favorited packages on{" "}
+                You're receiving this because you follow packages on{" "}
                 <Link
                   href="https://packrun.dev"
                   className="underline"

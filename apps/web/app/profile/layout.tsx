@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Profile | packrun.dev",
-  description: "Manage your packrun.dev account, favorite packages, and settings.",
+  description: "Manage your packrun.dev account, followed packages, and settings.",
   robots: {
     index: false,
     follow: false,

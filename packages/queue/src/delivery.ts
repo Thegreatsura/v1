@@ -31,7 +31,7 @@ export const EMAIL_RATE_LIMIT = {
 // Job Data Types
 // ============================================================================
 
-export interface EmailDeliveryJobData {
+export interface CriticalAlertEmailData {
   to: string;
   userId: string;
   template: "critical-alert";
@@ -43,6 +43,22 @@ export interface EmailDeliveryJobData {
     changelogSnippet?: string;
   };
 }
+
+export interface ReleaseLaunchedEmailData {
+  to: string;
+  userId: string;
+  template: "release-launched";
+  props: {
+    releaseTitle: string;
+    packageName?: string;
+    targetVersion: string;
+    releasedVersion: string;
+    description?: string;
+    websiteUrl?: string;
+  };
+}
+
+export type EmailDeliveryJobData = CriticalAlertEmailData | ReleaseLaunchedEmailData;
 
 export interface EmailDigestJobData {
   /** Period for the digest job - the job processes all users with this period */

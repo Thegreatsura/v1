@@ -1,7 +1,7 @@
 /**
  * Test Notification Script
  *
- * Syncs a package and triggers notifications for users who favorited it.
+ * Syncs a package and triggers notifications for users who follow it.
  *
  * Usage: bun run src/test-notify.ts ai
  */

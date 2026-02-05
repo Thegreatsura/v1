@@ -6,13 +6,20 @@
 
 import { and, desc, eq, sql } from "drizzle-orm";
 import type { Database } from "./client";
-import { favorite, notification, notificationPreferences, user } from "./schema";
+import {
+  notification,
+  notificationPreferences,
+  packageFollow,
+  releaseFollow,
+  upcomingRelease,
+  user,
+} from "./schema";
 
 // =============================================================================
 // Types
 // =============================================================================
 
-export interface UserWithFavoriteAndPreferences {
+export interface UserWithFollowAndPreferences {
   userId: string;
   email: string;
   notifyAllUpdates: boolean;
@@ -72,15 +79,15 @@ export interface NotificationPreferencesData {
 // =============================================================================
 
 /**
- * Get users who favorited a package along with their notification preferences
+ * Get users who follow a package along with their notification preferences
  */
-export async function getUsersWithFavoritesForPackage(
+export async function getUsersFollowingPackage(
   db: Database,
   packageName: string,
-): Promise<UserWithFavoriteAndPreferences[]> {
+): Promise<UserWithFollowAndPreferences[]> {
   const results = await db
     .select({
-      userId: favorite.userId,
+      userId: packageFollow.userId,
       email: user.email,
       notifyAllUpdates: notificationPreferences.notifyAllUpdates,
       notifyMajorOnly: notificationPreferences.notifyMajorOnly,
@@ -89,10 +96,10 @@ export async function getUsersWithFavoritesForPackage(
       emailDigestEnabled: notificationPreferences.emailDigestEnabled,
       emailImmediateCritical: notificationPreferences.emailImmediateCritical,
     })
-    .from(favorite)
-    .innerJoin(user, eq(favorite.userId, user.id))
-    .leftJoin(notificationPreferences, eq(favorite.userId, notificationPreferences.userId))
-    .where(eq(favorite.packageName, packageName));
+    .from(packageFollow)
+    .innerJoin(user, eq(packageFollow.userId, user.id))
+    .leftJoin(notificationPreferences, eq(packageFollow.userId, notificationPreferences.userId))
+    .where(eq(packageFollow.packageName, packageName));
 
   return results.map((row) => ({
     userId: row.userId,
@@ -115,59 +122,59 @@ export async function deleteUser(db: Database, userId: string): Promise<void> {
 }
 
 // =============================================================================
-// Favorites Queries
+// Package Follow Queries
 // =============================================================================
 
 /**
- * Get user's favorited packages
+ * Get user's followed packages
  */
-export async function listFavorites(db: Database, userId: string): Promise<string[]> {
+export async function listFollowedPackages(db: Database, userId: string): Promise<string[]> {
   const results = await db
-    .select({ packageName: favorite.packageName })
-    .from(favorite)
-    .where(eq(favorite.userId, userId))
-    .orderBy(favorite.createdAt);
+    .select({ packageName: packageFollow.packageName })
+    .from(packageFollow)
+    .where(eq(packageFollow.userId, userId))
+    .orderBy(packageFollow.createdAt);
 
   return results.map((f) => f.packageName);
 }
 
 /**
- * Add a package to user's favorites (ignores duplicates)
+ * Follow a package (ignores duplicates)
  */
-export async function addFavorite(
+export async function followPackage(
   db: Database,
   id: string,
   userId: string,
   packageName: string,
 ): Promise<void> {
-  await db.insert(favorite).values({ id, userId, packageName }).onConflictDoNothing();
+  await db.insert(packageFollow).values({ id, userId, packageName }).onConflictDoNothing();
 }
 
 /**
- * Remove a package from user's favorites
+ * Unfollow a package
  */
-export async function removeFavorite(
+export async function unfollowPackage(
   db: Database,
   userId: string,
   packageName: string,
 ): Promise<void> {
   await db
-    .delete(favorite)
-    .where(and(eq(favorite.userId, userId), eq(favorite.packageName, packageName)));
+    .delete(packageFollow)
+    .where(and(eq(packageFollow.userId, userId), eq(packageFollow.packageName, packageName)));
 }
 
 /**
- * Check if a package is in user's favorites
+ * Check if user is following a package
  */
-export async function checkFavorite(
+export async function isFollowingPackage(
   db: Database,
   userId: string,
   packageName: string,
 ): Promise<boolean> {
   const result = await db
-    .select({ id: favorite.id })
-    .from(favorite)
-    .where(and(eq(favorite.userId, userId), eq(favorite.packageName, packageName)))
+    .select({ id: packageFollow.id })
+    .from(packageFollow)
+    .where(and(eq(packageFollow.userId, userId), eq(packageFollow.packageName, packageName)))
     .limit(1);
 
   return result.length > 0;
@@ -418,4 +425,280 @@ export async function disableEmailNotifications(
     console.error("[DB] Error disabling email notifications:", error);
     return false;
   }
+}
+
+// =============================================================================
+// Upcoming Release Queries
+// =============================================================================
+
+export interface UpcomingReleaseRecord {
+  id: string;
+  packageName: string | null;
+  title: string;
+  description: string | null;
+  targetVersion: string;
+  versionMatchType: string;
+  releasedVersion: string | null;
+  releasedAt: Date | null;
+  status: string;
+  logoUrl: string | null;
+  websiteUrl: string | null;
+  expectedDate: Date | null;
+  submittedById: string;
+  featured: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface UpcomingReleaseInsert {
+  id: string;
+  packageName?: string | null;
+  title: string;
+  description?: string | null;
+  targetVersion: string;
+  versionMatchType: "exact" | "major";
+  logoUrl?: string | null;
+  websiteUrl?: string | null;
+  expectedDate?: Date | null;
+  submittedById: string;
+  featured?: boolean;
+}
+
+export interface ListReleasesOptions {
+  status?: "upcoming" | "released";
+  packageName?: string;
+  featured?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * Create a new upcoming release
+ */
+export async function createUpcomingRelease(
+  db: Database,
+  data: UpcomingReleaseInsert,
+): Promise<UpcomingReleaseRecord> {
+  const [release] = await db
+    .insert(upcomingRelease)
+    .values({
+      ...data,
+      status: "upcoming",
+    })
+    .returning();
+
+  return release as UpcomingReleaseRecord;
+}
+
+/**
+ * Get a single upcoming release by ID
+ */
+export async function getUpcomingRelease(
+  db: Database,
+  id: string,
+): Promise<UpcomingReleaseRecord | null> {
+  const [release] = await db
+    .select()
+    .from(upcomingRelease)
+    .where(eq(upcomingRelease.id, id))
+    .limit(1);
+
+  return (release as UpcomingReleaseRecord) || null;
+}
+
+/**
+ * List upcoming releases with filters
+ */
+export async function listUpcomingReleases(
+  db: Database,
+  options: ListReleasesOptions = {},
+): Promise<{ releases: UpcomingReleaseRecord[]; total: number }> {
+  const { status, packageName, featured, limit = 20, offset = 0 } = options;
+
+  const conditions = [];
+
+  if (status) {
+    conditions.push(eq(upcomingRelease.status, status));
+  }
+
+  if (packageName) {
+    conditions.push(eq(upcomingRelease.packageName, packageName));
+  }
+
+  if (featured !== undefined) {
+    conditions.push(eq(upcomingRelease.featured, featured));
+  }
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const releases = await db
+    .select()
+    .from(upcomingRelease)
+    .where(whereClause)
+    .orderBy(desc(upcomingRelease.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  const [countResult] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(upcomingRelease)
+    .where(whereClause);
+
+  return {
+    releases: releases as UpcomingReleaseRecord[],
+    total: Number(countResult?.count || 0),
+  };
+}
+
+/**
+ * Get featured releases for homepage
+ */
+export async function getFeaturedReleases(
+  db: Database,
+  limit = 4,
+): Promise<UpcomingReleaseRecord[]> {
+  const releases = await db
+    .select()
+    .from(upcomingRelease)
+    .where(and(eq(upcomingRelease.featured, true), eq(upcomingRelease.status, "upcoming")))
+    .orderBy(desc(upcomingRelease.createdAt))
+    .limit(limit);
+
+  return releases as UpcomingReleaseRecord[];
+}
+
+/**
+ * Get pending releases for a package (for auto-detection)
+ */
+export async function getPendingReleasesForPackage(
+  db: Database,
+  packageName: string,
+): Promise<UpcomingReleaseRecord[]> {
+  const releases = await db
+    .select()
+    .from(upcomingRelease)
+    .where(
+      and(eq(upcomingRelease.packageName, packageName), eq(upcomingRelease.status, "upcoming")),
+    );
+
+  return releases as UpcomingReleaseRecord[];
+}
+
+/**
+ * Mark a release as launched
+ */
+export async function markReleaseAsLaunched(
+  db: Database,
+  releaseId: string,
+  releasedVersion: string,
+): Promise<void> {
+  await db
+    .update(upcomingRelease)
+    .set({
+      status: "released",
+      releasedVersion,
+      releasedAt: new Date(),
+    })
+    .where(eq(upcomingRelease.id, releaseId));
+}
+
+/**
+ * Update an upcoming release
+ */
+export async function updateUpcomingRelease(
+  db: Database,
+  id: string,
+  data: Partial<UpcomingReleaseInsert>,
+): Promise<UpcomingReleaseRecord | null> {
+  const [updated] = await db
+    .update(upcomingRelease)
+    .set(data)
+    .where(eq(upcomingRelease.id, id))
+    .returning();
+
+  return (updated as UpcomingReleaseRecord) || null;
+}
+
+/**
+ * Delete an upcoming release
+ */
+export async function deleteUpcomingRelease(db: Database, id: string): Promise<void> {
+  await db.delete(upcomingRelease).where(eq(upcomingRelease.id, id));
+}
+
+// =============================================================================
+// Release Follow Queries
+// =============================================================================
+
+/**
+ * Follow a release
+ */
+export async function followRelease(
+  db: Database,
+  id: string,
+  userId: string,
+  releaseId: string,
+): Promise<void> {
+  await db.insert(releaseFollow).values({ id, userId, releaseId }).onConflictDoNothing();
+}
+
+/**
+ * Unfollow a release
+ */
+export async function unfollowRelease(
+  db: Database,
+  userId: string,
+  releaseId: string,
+): Promise<void> {
+  await db
+    .delete(releaseFollow)
+    .where(and(eq(releaseFollow.userId, userId), eq(releaseFollow.releaseId, releaseId)));
+}
+
+/**
+ * Check if user is following a release
+ */
+export async function isFollowingRelease(
+  db: Database,
+  userId: string,
+  releaseId: string,
+): Promise<boolean> {
+  const result = await db
+    .select({ id: releaseFollow.id })
+    .from(releaseFollow)
+    .where(and(eq(releaseFollow.userId, userId), eq(releaseFollow.releaseId, releaseId)))
+    .limit(1);
+
+  return result.length > 0;
+}
+
+/**
+ * Get users following a release (for notifications)
+ */
+export async function getUsersFollowingRelease(
+  db: Database,
+  releaseId: string,
+): Promise<{ userId: string; email: string }[]> {
+  const results = await db
+    .select({
+      userId: releaseFollow.userId,
+      email: user.email,
+    })
+    .from(releaseFollow)
+    .innerJoin(user, eq(releaseFollow.userId, user.id))
+    .where(eq(releaseFollow.releaseId, releaseId));
+
+  return results;
+}
+
+/**
+ * Get follower count for a release
+ */
+export async function getReleaseFollowerCount(db: Database, releaseId: string): Promise<number> {
+  const [result] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(releaseFollow)
+    .where(eq(releaseFollow.releaseId, releaseId));
+
+  return Number(result?.count || 0);
 }

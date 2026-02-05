@@ -1,29 +1,33 @@
 /**
  * Email Delivery Worker
  *
- * Processes immediate email notification jobs (critical alerts).
+ * Processes immediate email notification jobs (critical alerts, release announcements).
  */
 
-import { CriticalAlert, generateUnsubscribeToken, sendEmail } from "@packrun/email";
+import {
+  CriticalAlert,
+  generateUnsubscribeToken,
+  ReleaseLaunched,
+  sendEmail,
+} from "@packrun/email";
 import { createWorker, type Job } from "@packrun/queue";
 import {
+  type CriticalAlertEmailData,
   EMAIL_DELIVERY_QUEUE,
   EMAIL_RATE_LIMIT,
   type EmailDeliveryJobData,
+  type ReleaseLaunchedEmailData,
 } from "@packrun/queue/delivery";
 import React from "react";
 
 /**
- * Process email delivery job
+ * Process critical alert email
  */
-async function processEmailDelivery(job: Job<EmailDeliveryJobData>): Promise<void> {
-  const { to, userId, template, props } = job.data;
-
-  if (template !== "critical-alert") {
-    console.log(`[Email] Unknown template: ${template}, skipping`);
-    return;
-  }
-
+async function processCriticalAlert(
+  to: string,
+  userId: string,
+  props: CriticalAlertEmailData["props"],
+): Promise<void> {
   // Generate unsubscribe URL
   const unsubscribeToken = generateUnsubscribeToken(userId);
   const unsubscribeUrl = `https://api.packrun.dev/v1/unsubscribe?token=${unsubscribeToken}`;
@@ -52,6 +56,64 @@ async function processEmailDelivery(job: Job<EmailDeliveryJobData>): Promise<voi
     );
   } else {
     console.log(`[Email] Skipped (not configured) for ${props.packageName}@${props.newVersion}`);
+  }
+}
+
+/**
+ * Process release launched email
+ */
+async function processReleaseLaunched(
+  to: string,
+  userId: string,
+  props: ReleaseLaunchedEmailData["props"],
+): Promise<void> {
+  // Generate unsubscribe URL
+  const unsubscribeToken = generateUnsubscribeToken(userId);
+  const unsubscribeUrl = `https://api.packrun.dev/v1/unsubscribe?token=${unsubscribeToken}`;
+
+  // Create React element for the email
+  const emailElement = React.createElement(ReleaseLaunched, {
+    releaseTitle: props.releaseTitle,
+    packageName: props.packageName,
+    releasedVersion: props.releasedVersion,
+    description: props.description,
+    websiteUrl: props.websiteUrl,
+    unsubscribeUrl,
+  });
+
+  // Send email with exciting subject line
+  const packagePart = props.packageName ? `${props.packageName} ` : "";
+  const subject = `🚀 ${props.releaseTitle} is here! ${packagePart}v${props.releasedVersion} just shipped`;
+
+  const result = await sendEmail({
+    to,
+    subject,
+    react: emailElement,
+    userId,
+  });
+
+  if (result) {
+    console.log(`[Email] Sent release notification for ${props.releaseTitle} to ${to}`);
+  } else {
+    console.log(`[Email] Skipped (not configured) for ${props.releaseTitle}`);
+  }
+}
+
+/**
+ * Process email delivery job
+ */
+async function processEmailDelivery(job: Job<EmailDeliveryJobData>): Promise<void> {
+  const { to, userId, template, props } = job.data;
+
+  switch (template) {
+    case "critical-alert":
+      await processCriticalAlert(to, userId, props as CriticalAlertEmailData["props"]);
+      break;
+    case "release-launched":
+      await processReleaseLaunched(to, userId, props as ReleaseLaunchedEmailData["props"]);
+      break;
+    default:
+      console.log(`[Email] Unknown template: ${template}, skipping`);
   }
 }
 

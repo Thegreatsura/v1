@@ -8,6 +8,7 @@ import { Footer } from "@/components/footer";
 import { NotificationBell } from "@/components/notification-bell";
 import { TypesenseLogo } from "@/components/typesense-logo";
 import { Spinner } from "@/components/ui/spinner";
+import { UpcomingReleasesWidget } from "@/components/upcoming-releases-widget";
 import { UserProfile } from "@/components/user-profile";
 import { formatDownloads } from "@/lib/api";
 import { useSearch } from "@/lib/hooks";
@@ -309,6 +310,11 @@ export default function Home() {
                 </span>
               ),
             )}
+          </div>
+
+          {/* Upcoming releases widget */}
+          <div className="w-full max-w-3xl mt-12 px-4 sm:px-0">
+            <UpcomingReleasesWidget limit={3} variant="cards" />
           </div>
         </div>
 

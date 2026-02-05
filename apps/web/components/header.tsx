@@ -31,6 +31,12 @@ export function Header() {
         >
           MCP
         </Link>
+        <Link
+          href="/releases"
+          className="hidden sm:block text-xs uppercase tracking-wider text-subtle hover:text-foreground transition-colors"
+        >
+          Releases
+        </Link>
         <NotificationBell />
         <UserProfile />
       </div>

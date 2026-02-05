@@ -1,105 +1,105 @@
 /**
- * Favorites Procedures
+ * Follow Procedures
  *
- * oRPC procedures for user favorites (protected routes).
+ * oRPC procedures for package following (protected routes).
  */
 
 import { protectedProcedure, publicProcedure } from "@packrun/api";
 import {
-  FavoriteActionResponseSchema,
-  FavoriteCheckResponseSchema,
-  FavoritesListResponseSchema,
+  FollowActionResponseSchema,
+  FollowCheckResponseSchema,
+  FollowingListResponseSchema,
   SuccessResponseSchema,
 } from "@packrun/api/schemas";
 import { db } from "@packrun/db/client";
 import {
-  addFavorite,
-  checkFavorite,
   deleteUser,
-  listFavorites,
-  removeFavorite,
+  followPackage,
+  isFollowingPackage,
+  listFollowedPackages,
+  unfollowPackage,
 } from "@packrun/db/queries";
 import { createId } from "@paralleldrive/cuid2";
 import { z } from "zod";
 
 /**
- * Get user favorites
+ * Get followed packages
  */
 export const list = protectedProcedure
   .route({
     method: "GET",
-    path: "/v1/favorites",
-    summary: "Get user favorites",
-    description: "Get the list of favorited packages for the authenticated user",
-    tags: ["Favorites"],
+    path: "/v1/following",
+    summary: "Get followed packages",
+    description: "Get the list of followed packages for the authenticated user",
+    tags: ["Following"],
   })
-  .output(FavoritesListResponseSchema)
+  .output(FollowingListResponseSchema)
   .handler(async ({ context }) => {
-    const favorites = await listFavorites(db!, context.user.id);
-    return { favorites };
+    const following = await listFollowedPackages(db!, context.user.id);
+    return { following };
   });
 
 /**
- * Add favorite
+ * Follow a package
  */
-export const add = protectedProcedure
+export const follow = protectedProcedure
   .route({
     method: "POST",
-    path: "/v1/favorites/{name}",
-    summary: "Add favorite",
-    description: "Add a package to the user's favorites",
-    tags: ["Favorites"],
+    path: "/v1/following/{name}",
+    summary: "Follow package",
+    description: "Follow a package to get notified about updates",
+    tags: ["Following"],
   })
   .input(z.object({ name: z.string() }))
-  .output(FavoriteActionResponseSchema)
+  .output(FollowActionResponseSchema)
   .handler(async ({ input, context }) => {
     const packageName = decodeURIComponent(input.name);
-    await addFavorite(db!, createId(), context.user.id, packageName);
+    await followPackage(db!, createId(), context.user.id, packageName);
     return { success: true, packageName };
   });
 
 /**
- * Remove favorite
+ * Unfollow a package
  */
-export const remove = protectedProcedure
+export const unfollow = protectedProcedure
   .route({
     method: "DELETE",
-    path: "/v1/favorites/{name}",
-    summary: "Remove favorite",
-    description: "Remove a package from the user's favorites",
-    tags: ["Favorites"],
+    path: "/v1/following/{name}",
+    summary: "Unfollow package",
+    description: "Stop following a package",
+    tags: ["Following"],
   })
   .input(z.object({ name: z.string() }))
-  .output(FavoriteActionResponseSchema)
+  .output(FollowActionResponseSchema)
   .handler(async ({ input, context }) => {
     const packageName = decodeURIComponent(input.name);
-    await removeFavorite(db!, context.user.id, packageName);
+    await unfollowPackage(db!, context.user.id, packageName);
     return { success: true, packageName };
   });
 
 /**
- * Check favorite status
+ * Check follow status
  * This is a public procedure that returns false if not authenticated
  */
 export const check = publicProcedure
   .route({
     method: "GET",
-    path: "/v1/favorites/check/{name}",
-    summary: "Check favorite status",
-    description: "Check if a package is in the user's favorites",
-    tags: ["Favorites"],
+    path: "/v1/following/check/{name}",
+    summary: "Check follow status",
+    description: "Check if a package is being followed by the user",
+    tags: ["Following"],
   })
   .input(z.object({ name: z.string() }))
-  .output(FavoriteCheckResponseSchema)
+  .output(FollowCheckResponseSchema)
   .handler(async ({ input, context }) => {
     if (!context.user) {
-      return { isFavorite: false };
+      return { isFollowing: false };
     }
 
     const packageName = decodeURIComponent(input.name);
-    const isFavorite = await checkFavorite(db!, context.user.id, packageName);
+    const isFollowing = await isFollowingPackage(db!, context.user.id, packageName);
 
-    return { isFavorite };
+    return { isFollowing };
   });
 
 /**
@@ -123,10 +123,10 @@ export const deleteAccount = protectedProcedure
 // Router
 // =============================================================================
 
-export const favoritesRouter = {
+export const followRouter = {
   list,
-  add,
-  remove,
+  follow,
+  unfollow,
   check,
   deleteAccount,
 };
