@@ -1,6 +1,6 @@
+import { OpenPanelComponent } from "@openpanel/nextjs";
 import { GeistMono } from "geist/font/mono";
 import type { Metadata } from "next";
-import { OpenPanelComponent } from "@openpanel/nextjs";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 

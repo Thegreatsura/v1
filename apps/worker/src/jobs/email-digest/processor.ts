@@ -5,8 +5,8 @@
  * Groups notifications by severity and includes unread updates from the period.
  */
 
-import { sendEmail, Digest, generateUnsubscribeToken, type DigestUpdate } from "@packrun/email";
 import { db } from "@packrun/db/client";
+import { Digest, type DigestUpdate, generateUnsubscribeToken, sendEmail } from "@packrun/email";
 import React from "react";
 
 /**

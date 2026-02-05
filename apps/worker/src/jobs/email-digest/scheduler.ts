@@ -4,13 +4,13 @@
  * Schedules daily and weekly digest jobs using BullMQ's repeatable jobs.
  */
 
-import { Queue } from "bullmq";
 import { getConnection } from "@packrun/queue";
 import {
-  EMAIL_DIGEST_QUEUE,
   DIGEST_JOB_OPTIONS,
+  EMAIL_DIGEST_QUEUE,
   type EmailDigestJobData,
 } from "@packrun/queue/delivery";
+import { Queue } from "bullmq";
 
 let digestQueue: Queue<EmailDigestJobData> | null = null;
 

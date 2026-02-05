@@ -10,11 +10,12 @@
  */
 
 import { inferCategory } from "@packrun/decisions";
+import { healthCache } from "../lib/cache";
 import {
   fetchGitHubDataForPackage,
   fetchGitHubReadme,
-  parseGitHubUrl,
   type GitHubData,
+  parseGitHubUrl,
 } from "../lib/clients/github";
 import {
   checkTypesPackage,
@@ -48,7 +49,6 @@ import {
   generateRecommendation,
   type HealthAssessment,
 } from "../lib/health-score";
-import { healthCache } from "../lib/cache";
 import { queuePackageSync } from "../lib/queue";
 import { formatReplacement, type ReplacementInfo } from "../lib/replacements";
 import { stripHtml } from "../lib/utils";

@@ -1,3 +1,3 @@
-export { createEmailDigestWorker } from "./worker";
-export { initializeDigestScheduler, getDigestQueue } from "./scheduler";
 export { processDigests } from "./processor";
+export { getDigestQueue, initializeDigestScheduler } from "./scheduler";
+export { createEmailDigestWorker } from "./worker";

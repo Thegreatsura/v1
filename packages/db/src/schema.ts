@@ -6,14 +6,13 @@
 
 import { relations } from "drizzle-orm";
 import {
+  boolean,
+  index,
+  integer,
   pgTable,
   text,
   timestamp,
-  boolean,
-  index,
   uniqueIndex,
-  integer,
-  jsonb,
 } from "drizzle-orm/pg-core";
 
 // =============================================================================
@@ -171,7 +170,6 @@ export const notificationPreferences = pgTable("notification_preferences", {
 
   // Channel preferences
   inAppEnabled: boolean("in_app_enabled").default(true).notNull(),
-  slackEnabled: boolean("slack_enabled").default(false).notNull(),
   emailDigestEnabled: boolean("email_digest_enabled").default(false).notNull(),
   emailDigestFrequency: text("email_digest_frequency").default("daily"), // "daily" | "weekly"
   emailImmediateCritical: boolean("email_immediate_critical").default(true).notNull(),
@@ -181,40 +179,6 @@ export const notificationPreferences = pgTable("notification_preferences", {
     .$onUpdate(() => new Date())
     .notNull(),
 });
-
-export const integrationConnection = pgTable(
-  "integration_connection",
-  {
-    id: text("id").primaryKey(),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-
-    // Provider: "slack" | "discord" | "teams" | "webhook"
-    provider: text("provider").notNull(),
-
-    // Display name for UI (e.g., "Slack - #engineering")
-    displayName: text("display_name").notNull(),
-
-    // Provider-specific config as JSON
-    // Slack: { teamId, teamName, channelId, channelName, accessToken }
-    // Discord: { webhookUrl, guildName, channelName }
-    // Webhook: { url, secret, headers }
-    config: jsonb("config").notNull(),
-
-    // State
-    enabled: boolean("enabled").default(true).notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .$onUpdate(() => new Date())
-      .notNull(),
-  },
-  (table) => [
-    index("integration_userId_idx").on(table.userId),
-    index("integration_userId_provider_idx").on(table.userId, table.provider),
-  ],
-);
 
 // =============================================================================
 // Relations
@@ -226,7 +190,6 @@ export const userRelations = relations(user, ({ many, one }) => ({
   favorites: many(favorite),
   notifications: many(notification),
   notificationPreferences: one(notificationPreferences),
-  integrationConnections: many(integrationConnection),
 }));
 
 export const favoriteRelations = relations(favorite, ({ one }) => ({
@@ -260,13 +223,6 @@ export const notificationRelations = relations(notification, ({ one }) => ({
 export const notificationPreferencesRelations = relations(notificationPreferences, ({ one }) => ({
   user: one(user, {
     fields: [notificationPreferences.userId],
-    references: [user.id],
-  }),
-}));
-
-export const integrationConnectionRelations = relations(integrationConnection, ({ one }) => ({
-  user: one(user, {
-    fields: [integrationConnection.userId],
     references: [user.id],
   }),
 }));

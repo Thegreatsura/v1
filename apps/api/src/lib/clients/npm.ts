@@ -30,8 +30,8 @@ export {
   isCJS,
   isDeprecated,
   isESM,
-  searchNpmRegistry,
   type NpmDownloadsResponse,
   type NpmPackageMetadata,
   type NpmVersionData,
+  searchNpmRegistry,
 } from "@packrun/data/npm";

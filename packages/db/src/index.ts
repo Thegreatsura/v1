@@ -4,11 +4,9 @@
  * Provides schema definitions and database client.
  */
 
-// Schema exports
-export * from "./schema";
-
 // Client exports
-export { db, createDb, isDatabaseAvailable, type Database } from "./client";
-
+export { createDb, type Database, db, isDatabaseAvailable } from "./client";
 // Query exports
 export * from "./queries";
+// Schema exports
+export * from "./schema";

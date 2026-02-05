@@ -1,34 +1,15 @@
+/**
+ * Server-side API utilities
+ *
+ * This file is for SERVER-SIDE data fetching with Next.js ISR caching.
+ * For CLIENT-SIDE API calls, use the oRPC client in lib/orpc/
+ *
+ * Server-side fetch uses Next.js built-in caching (next: { revalidate })
+ * to enable ISR for static pages.
+ */
+
 // API URL (NEXT_PUBLIC_ works on both client and server)
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
-// Search API
-export interface SearchResult {
-  name: string;
-  description?: string;
-  version: string;
-  downloads: number;
-  hasTypes?: boolean;
-}
-
-export async function searchPackages(query: string): Promise<SearchResult[]> {
-  if (!query.trim()) return [];
-  if (!API_URL) {
-    console.warn("[api] NEXT_PUBLIC_API_URL not configured");
-    return [];
-  }
-
-  const res = await fetch(`${API_URL}/search?q=${encodeURIComponent(query)}&limit=10`);
-  if (!res.ok) throw new Error("Search failed");
-
-  const data = await res.json();
-  return (data.hits || []).map((hit: Record<string, unknown>) => ({
-    name: hit.name || hit.id,
-    description: hit.description || "",
-    version: hit.version || "",
-    downloads: hit.downloads || 0,
-    hasTypes: hit.hasTypes || false,
-  }));
-}
 
 // Package Health API
 export interface PackageHealthResponse {
@@ -147,48 +128,6 @@ export async function fetchPackageHealth(name: string): Promise<PackageHealthRes
     console.error(`[api] Failed to fetch health for ${name}:`, error);
     return null;
   }
-}
-
-// Alternatives API
-export interface Alternative {
-  name: string;
-  score: number;
-  badges: string[];
-}
-
-export interface AlternativesData {
-  package: string;
-  category: string;
-  categoryName: string;
-  alternatives: Alternative[];
-  message?: string;
-}
-
-export async function fetchAlternatives(packageName: string): Promise<AlternativesData | null> {
-  if (!API_URL) return null;
-  const res = await fetch(`${API_URL}/api/compare?package=${encodeURIComponent(packageName)}`);
-  if (!res.ok) return null;
-  return res.json();
-}
-
-// Install Size API
-export interface InstallSizeResponse {
-  selfSize: number;
-  totalSize: number;
-  dependencyCount: number;
-}
-
-export async function fetchInstallSize(
-  name: string,
-  version?: string,
-): Promise<InstallSizeResponse | null> {
-  if (!API_URL) return null;
-  const url = `${API_URL}/api/package/${encodeURIComponent(name)}/install-size${
-    version ? `?version=${encodeURIComponent(version)}` : ""
-  }`;
-  const res = await fetch(url);
-  if (!res.ok) return null;
-  return res.json();
 }
 
 // Utils

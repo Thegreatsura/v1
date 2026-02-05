@@ -17,7 +17,7 @@ import {
   getLatestWithHealth,
   getPackageVersion,
   suggestLatestForCategory,
-} from "../tools/index";
+} from "../tools";
 import { getPackageHealth } from "../tools/health";
 
 /**

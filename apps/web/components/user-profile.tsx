@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useSession, signIn, signOut } from "@/lib/auth-client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { signIn, signOut, useSession } from "@/lib/auth-client";
 
 export function UserProfile() {
   const { data: session, isPending } = useSession();

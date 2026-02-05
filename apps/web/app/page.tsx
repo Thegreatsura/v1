@@ -5,12 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Footer } from "@/components/footer";
-import { Spinner } from "@/components/ui/spinner";
-import { useSearch } from "@/lib/hooks";
-import { formatDownloads } from "@/lib/api";
-import { UserProfile } from "@/components/user-profile";
 import { NotificationBell } from "@/components/notification-bell";
 import { TypesenseLogo } from "@/components/typesense-logo";
+import { Spinner } from "@/components/ui/spinner";
+import { UserProfile } from "@/components/user-profile";
+import { formatDownloads } from "@/lib/api";
+import { useSearch } from "@/lib/hooks";
 
 export default function Home() {
   const [query, setQuery] = useState("");
@@ -22,7 +22,7 @@ export default function Home() {
   const resultsRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  const { data: results = [], isLoading, isFetched, debouncedQuery } = useSearch(query, 80);
+  const { data: results = [], isLoading, isFetched, debouncedQuery } = useSearch(query, 50);
 
   // Blinking cursor effect
   useEffect(() => {

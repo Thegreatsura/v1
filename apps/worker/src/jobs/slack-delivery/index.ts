@@ -1,1 +1,0 @@
-export { createSlackDeliveryWorker } from "./worker";

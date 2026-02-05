@@ -9,10 +9,9 @@ import {
   NPM_SYNC_QUEUE,
   type SyncJobData,
 } from "@packrun/queue/npm-sync";
-import { processBulkSyncJob, processSyncJob } from "./npm-sync";
-import { createSlackDeliveryWorker } from "./slack-delivery";
 import { createEmailDeliveryWorker } from "./email-delivery";
 import { createEmailDigestWorker, initializeDigestScheduler } from "./email-digest";
+import { processBulkSyncJob, processSyncJob } from "./npm-sync";
 
 export { getCombinedStats as getQueueStats } from "./npm-sync";
 
@@ -28,7 +27,6 @@ export function createWorkers() {
   });
 
   // Notification delivery workers
-  const slackWorker = createSlackDeliveryWorker();
   const emailWorker = createEmailDeliveryWorker();
   const digestWorker = createEmailDigestWorker();
 
@@ -57,10 +55,6 @@ export function createWorkers() {
     console.error("Bulk sync worker error:", error);
   });
 
-  slackWorker.on("failed", (job, error) => {
-    console.error(`[Slack ${job?.id}] Failed:`, error.message);
-  });
-
   emailWorker.on("failed", (job, error) => {
     console.error(`[Email ${job?.id}] Failed:`, error.message);
   });
@@ -72,13 +66,11 @@ export function createWorkers() {
   return {
     syncWorker,
     bulkSyncWorker,
-    slackWorker,
     emailWorker,
     digestWorker,
     async close() {
       await syncWorker.close();
       await bulkSyncWorker.close();
-      await slackWorker.close();
       await emailWorker.close();
       await digestWorker.close();
     },

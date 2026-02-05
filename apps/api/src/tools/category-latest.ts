@@ -5,12 +5,12 @@
  * with health scores and recommendations.
  */
 
-import { z } from "zod";
 import { getCategoryName } from "@packrun/decisions/categories";
 import {
   COMPARISON_CATEGORIES,
   getComparison as getCuratedComparison,
 } from "@packrun/decisions/comparisons";
+import { z } from "zod";
 import { getLatestWithHealth } from "./latest-health";
 
 export const suggestLatestForCategorySchema = z.object({

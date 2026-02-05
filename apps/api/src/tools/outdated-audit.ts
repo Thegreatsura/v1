@@ -6,9 +6,9 @@
  */
 
 import { z } from "zod";
+import { getLatestWithHealth } from "./latest-health";
 import { getPackageVersion } from "./version";
 import { checkVersionHealth } from "./version-health";
-import { getLatestWithHealth } from "./latest-health";
 
 export const auditOutdatedPackagesSchema = z.object({
   packageJson: z

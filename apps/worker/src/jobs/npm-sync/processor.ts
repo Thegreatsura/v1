@@ -5,6 +5,7 @@
  * Now includes notification creation for package updates.
  */
 
+import { isDatabaseAvailable } from "@packrun/db/client";
 import { inferCategory } from "@packrun/decisions";
 import type { Job } from "bullmq";
 import {
@@ -17,10 +18,9 @@ import {
   upsertPackages,
 } from "../../clients";
 import { extractCompatibility } from "../../lib/compatibility";
-import { getPreviousVersion } from "../../lib/version-tracker";
-import { enrichPackageUpdate } from "../../lib/notification-enrichment";
 import { dispatchNotifications } from "../../lib/notification-dispatcher";
-import { isDatabaseAvailable } from "@packrun/db/client";
+import { enrichPackageUpdate } from "../../lib/notification-enrichment";
+import { getPreviousVersion } from "../../lib/version-tracker";
 import type { BulkSyncJobData, SyncJobData } from "./types";
 
 /**

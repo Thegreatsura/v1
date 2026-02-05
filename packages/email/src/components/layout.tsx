@@ -9,18 +9,18 @@
  */
 
 import {
-  Html,
-  Head,
   Body,
+  Column,
   Container,
-  Section,
-  Text,
+  Font,
+  Head,
+  Html,
+  Img,
   Link,
   Preview,
-  Font,
-  Img,
   Row,
-  Column,
+  Section,
+  Text,
 } from "@react-email/components";
 import { Tailwind } from "@react-email/tailwind";
 import type { ReactNode } from "react";

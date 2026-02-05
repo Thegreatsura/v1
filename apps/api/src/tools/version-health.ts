@@ -6,9 +6,9 @@
  */
 
 import { z } from "zod";
-import { getPackageHealth } from "./health";
-import { getPackage, getLatestVersion } from "../lib/clients/npm";
+import { getLatestVersion, getPackage } from "../lib/clients/npm";
 import { fetchVulnerabilities } from "../lib/clients/osv";
+import { getPackageHealth } from "./health";
 
 export const checkVersionHealthSchema = z.object({
   name: z.string().describe("The npm package name"),

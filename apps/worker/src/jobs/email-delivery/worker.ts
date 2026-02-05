@@ -4,13 +4,13 @@
  * Processes immediate email notification jobs (critical alerts).
  */
 
+import { CriticalAlert, generateUnsubscribeToken, sendEmail } from "@packrun/email";
 import { createWorker, type Job } from "@packrun/queue";
 import {
   EMAIL_DELIVERY_QUEUE,
   EMAIL_RATE_LIMIT,
   type EmailDeliveryJobData,
 } from "@packrun/queue/delivery";
-import { sendEmail, CriticalAlert, generateUnsubscribeToken } from "@packrun/email";
 import React from "react";
 
 /**

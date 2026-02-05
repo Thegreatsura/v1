@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  getRandomLocation,
   addPackageToStore,
+  getRandomLocation,
   type PackageUpdate,
 } from "@/components/globe-visualization";
 

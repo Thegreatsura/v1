@@ -12,10 +12,7 @@ import { typesenseClient } from "../clients";
  */
 export async function getPreviousVersion(packageName: string): Promise<string | null> {
   try {
-    const doc = await typesenseClient
-      .collections("packages")
-      .documents(packageName)
-      .retrieve();
+    const doc = await typesenseClient.collections("packages").documents(packageName).retrieve();
 
     return (doc as { version?: string }).version || null;
   } catch (error) {
@@ -34,10 +31,7 @@ export async function getPreviousVersion(packageName: string): Promise<string | 
  */
 export async function getPackageRepository(packageName: string): Promise<string | null> {
   try {
-    const doc = await typesenseClient
-      .collections("packages")
-      .documents(packageName)
-      .retrieve();
+    const doc = await typesenseClient.collections("packages").documents(packageName).retrieve();
 
     return (doc as { repository?: string }).repository || null;
   } catch {

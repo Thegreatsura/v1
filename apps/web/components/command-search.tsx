@@ -2,11 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { TypesenseLogo } from "@/components/typesense-logo";
 import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { Spinner } from "@/components/ui/spinner";
-import { useSearch } from "@/lib/hooks";
 import { formatDownloads } from "@/lib/api";
-import { TypesenseLogo } from "@/components/typesense-logo";
+import { useSearch } from "@/lib/hooks";
 
 // Popular packages to show by default
 const POPULAR_PACKAGES = [

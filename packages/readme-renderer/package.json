@@ -8,6 +8,11 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "check-types": "tsc --noEmit"
+  },
   "dependencies": {
     "emoji-regex": "^10.6.0",
     "marked": "^17.0.1",

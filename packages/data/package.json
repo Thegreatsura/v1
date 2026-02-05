@@ -11,6 +11,11 @@
     "./npms": "./src/npms.ts",
     "./bundlephobia": "./src/bundlephobia.ts"
   },
+  "scripts": {
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "check-types": "tsc --noEmit"
+  },
   "devDependencies": {
     "@packrun/typescript-config": "workspace:*",
     "typescript": "^5.9.3"

@@ -5,8 +5,8 @@
  */
 
 import type { BundleData, PackageMetrics } from "@packrun/decisions/schema";
-import { fetchPackageMetadata } from "./clients/npm";
 import { fetchGitHubData } from "./clients/github";
+import { fetchPackageMetadata } from "./clients/npm";
 
 const BUNDLEPHOBIA_API = "https://bundlephobia.com/api/size";
 const NPM_DOWNLOADS = "https://api.npmjs.org/downloads";

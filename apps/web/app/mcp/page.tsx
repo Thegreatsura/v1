@@ -1,7 +1,7 @@
-import Link from "next/link";
 import type { Metadata } from "next";
-import { Header } from "@/components/header";
+import Link from "next/link";
 import { Footer } from "@/components/footer";
+import { Header } from "@/components/header";
 
 export const metadata: Metadata = {
   title: "Model Context Protocol (MCP) Integration | packrun.dev",

@@ -1,116 +1,12 @@
 "use client";
 
-import { useSession, signOut } from "@/lib/auth-client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useState, useEffect, Suspense } from "react";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-
-// =============================================================================
-// Types
-// =============================================================================
-
-interface NotificationPreferences {
-  notifyAllUpdates: boolean;
-  notifyMajorOnly: boolean;
-  notifySecurityOnly: boolean;
-  inAppEnabled: boolean;
-  slackEnabled: boolean;
-  emailDigestEnabled: boolean;
-  emailDigestFrequency: "daily" | "weekly";
-  emailImmediateCritical: boolean;
-}
-
-interface Integration {
-  id: string;
-  provider: string;
-  displayName: string;
-  enabled: boolean;
-  createdAt: string;
-}
-
-// =============================================================================
-// API Functions
-// =============================================================================
-
-async function fetchFavorites(): Promise<string[]> {
-  const res = await fetch(`${API_URL}/api/favorites`, { credentials: "include" });
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.favorites || [];
-}
-
-async function removeFavorite(packageName: string): Promise<void> {
-  const res = await fetch(`${API_URL}/api/favorites/${encodeURIComponent(packageName)}`, {
-    method: "DELETE",
-    credentials: "include",
-  });
-  if (!res.ok) throw new Error("Failed to remove favorite");
-}
-
-async function deleteAccount(): Promise<void> {
-  const res = await fetch(`${API_URL}/api/account`, {
-    method: "DELETE",
-    credentials: "include",
-  });
-  if (!res.ok) throw new Error("Failed to delete account");
-}
-
-async function fetchNotificationPreferences(): Promise<NotificationPreferences> {
-  const res = await fetch(`${API_URL}/api/notifications/preferences`, { credentials: "include" });
-  if (!res.ok) throw new Error("Failed to fetch preferences");
-  const data = await res.json();
-  return data.preferences;
-}
-
-async function updateNotificationPreferences(
-  prefs: Partial<NotificationPreferences>,
-): Promise<NotificationPreferences> {
-  const res = await fetch(`${API_URL}/api/notifications/preferences`, {
-    method: "PUT",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(prefs),
-  });
-  if (!res.ok) throw new Error("Failed to update preferences");
-  const data = await res.json();
-  return data.preferences;
-}
-
-async function fetchIntegrations(): Promise<Integration[]> {
-  const res = await fetch(`${API_URL}/api/integrations`, { credentials: "include" });
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.integrations || [];
-}
-
-async function connectSlack(): Promise<string> {
-  const res = await fetch(`${API_URL}/api/integrations/slack/connect`, { credentials: "include" });
-  if (!res.ok) throw new Error("Failed to initiate Slack connection");
-  const data = await res.json();
-  return data.authUrl;
-}
-
-async function disconnectIntegration(id: string): Promise<void> {
-  const res = await fetch(`${API_URL}/api/integrations/${id}`, {
-    method: "DELETE",
-    credentials: "include",
-  });
-  if (!res.ok) throw new Error("Failed to disconnect integration");
-}
-
-async function toggleIntegration(id: string, enabled: boolean): Promise<void> {
-  const res = await fetch(`${API_URL}/api/integrations/${id}`, {
-    method: "PATCH",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ enabled }),
-  });
-  if (!res.ok) throw new Error("Failed to update integration");
-}
+import { Suspense, useEffect, useState } from "react";
+import { signOut, useSession } from "@/lib/auth-client";
+import { orpc } from "@/lib/orpc/query";
 
 // =============================================================================
 // Toggle Component
@@ -152,48 +48,21 @@ function Toggle({
 function NotificationPreferencesSection() {
   const queryClient = useQueryClient();
 
-  const { data: preferences, isLoading: prefsLoading } = useQuery({
-    queryKey: ["notification-preferences"],
-    queryFn: fetchNotificationPreferences,
+  const { data: preferencesData, isLoading: prefsLoading } = useQuery({
+    ...orpc.notifications.getPreferences.queryOptions(),
   });
-
-  const { data: integrations = [], isLoading: integrationsLoading } = useQuery({
-    queryKey: ["integrations"],
-    queryFn: fetchIntegrations,
-  });
+  const preferences = preferencesData?.preferences;
 
   const updatePrefsMutation = useMutation({
-    mutationFn: updateNotificationPreferences,
+    ...orpc.notifications.updatePreferences.mutationOptions(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notification-preferences"] });
+      queryClient.invalidateQueries({
+        queryKey: orpc.notifications.getPreferences.queryOptions().queryKey,
+      });
     },
   });
 
-  const connectSlackMutation = useMutation({
-    mutationFn: connectSlack,
-    onSuccess: (authUrl) => {
-      window.location.href = authUrl;
-    },
-  });
-
-  const disconnectMutation = useMutation({
-    mutationFn: disconnectIntegration,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["integrations"] });
-    },
-  });
-
-  const toggleMutation = useMutation({
-    mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
-      toggleIntegration(id, enabled),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["integrations"] });
-    },
-  });
-
-  const slackIntegrations = integrations.filter((i) => i.provider === "slack");
-
-  if (prefsLoading || integrationsLoading) {
+  if (prefsLoading) {
     return (
       <div className="space-y-4">
         {[1, 2, 3].map((i) => (
@@ -259,7 +128,9 @@ function NotificationPreferencesSection() {
             <span className="text-sm">Immediate alerts for security updates</span>
             <Toggle
               checked={preferences?.emailImmediateCritical ?? true}
-              onChange={(checked) => updatePrefsMutation.mutate({ emailImmediateCritical: checked })}
+              onChange={(checked) =>
+                updatePrefsMutation.mutate({ emailImmediateCritical: checked })
+              }
             />
           </div>
           <div className="flex items-center justify-between">
@@ -288,62 +159,6 @@ function NotificationPreferencesSection() {
           )}
         </div>
       </div>
-
-      {/* Slack integration */}
-      <div>
-        <h3 className="text-xs font-medium text-subtle uppercase tracking-wider mb-3">
-          Slack integration
-        </h3>
-        {slackIntegrations.length === 0 ? (
-          <button
-            onClick={() => connectSlackMutation.mutate()}
-            disabled={connectSlackMutation.isPending}
-            className="text-sm text-muted hover:text-foreground transition-colors flex items-center gap-2"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z" />
-            </svg>
-            {connectSlackMutation.isPending ? "Connecting..." : "Connect Slack"}
-          </button>
-        ) : (
-          <div className="space-y-2">
-            {slackIntegrations.map((integration) => (
-              <div
-                key={integration.id}
-                className="flex items-center justify-between border border-border p-3"
-              >
-                <div className="flex items-center gap-2">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-muted">
-                    <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z" />
-                  </svg>
-                  <span className="text-sm">{integration.displayName}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Toggle
-                    checked={integration.enabled}
-                    onChange={(enabled) =>
-                      toggleMutation.mutate({ id: integration.id, enabled })
-                    }
-                  />
-                  <button
-                    onClick={() => disconnectMutation.mutate(integration.id)}
-                    className="text-xs text-subtle hover:text-red-500 transition-colors"
-                  >
-                    Disconnect
-                  </button>
-                </div>
-              </div>
-            ))}
-            <button
-              onClick={() => connectSlackMutation.mutate()}
-              disabled={connectSlackMutation.isPending}
-              className="text-xs text-subtle hover:text-foreground transition-colors"
-            >
-              + Connect another workspace
-            </button>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
@@ -369,23 +184,25 @@ function ProfileContent() {
   }, [searchParams]);
 
   // Fetch favorites
-  const { data: favorites = [], isLoading: favoritesLoading } = useQuery({
-    queryKey: ["favorites"],
-    queryFn: fetchFavorites,
+  const { data: favoritesData, isLoading: favoritesLoading } = useQuery({
+    ...orpc.favorites.list.queryOptions(),
     enabled: !!session?.user,
   });
+  const favorites = favoritesData?.favorites ?? [];
 
   // Remove favorite mutation
   const removeFavoriteMutation = useMutation({
-    mutationFn: removeFavorite,
+    ...orpc.favorites.remove.mutationOptions(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["favorites"] });
+      queryClient.invalidateQueries({
+        queryKey: orpc.favorites.list.queryOptions().queryKey,
+      });
     },
   });
 
   // Delete account mutation
   const deleteAccountMutation = useMutation({
-    mutationFn: deleteAccount,
+    ...orpc.favorites.deleteAccount.mutationOptions(),
     onSuccess: () => {
       signOut();
     },
@@ -412,7 +229,7 @@ function ProfileContent() {
 
   const handleDeleteAccount = () => {
     if (deleteConfirmText === "delete my account") {
-      deleteAccountMutation.mutate();
+      deleteAccountMutation.mutate({});
     }
   };
 
@@ -497,7 +314,7 @@ function ProfileContent() {
                       {pkg}
                     </Link>
                     <button
-                      onClick={() => removeFavoriteMutation.mutate(pkg)}
+                      onClick={() => removeFavoriteMutation.mutate({ name: pkg })}
                       disabled={removeFavoriteMutation.isPending}
                       className="text-xs text-subtle hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
                     >

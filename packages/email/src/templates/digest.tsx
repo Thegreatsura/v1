@@ -4,8 +4,8 @@
  * Matches packrun.dev website design - dark mode, Geist Mono, sharp corners.
  */
 
-import { Section, Text, Link, Hr } from "@react-email/components";
-import { Layout, colors } from "../components/layout";
+import { Hr, Link, Section, Text } from "@react-email/components";
+import { colors, Layout } from "../components/layout";
 
 export interface DigestUpdate {
   packageName: string;

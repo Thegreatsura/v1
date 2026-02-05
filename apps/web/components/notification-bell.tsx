@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSession } from "@/lib/auth-client";
+import { useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,89 +12,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { formatDistanceToNow } from "date-fns";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
-// =============================================================================
-// Types
-// =============================================================================
-
-interface Notification {
-  id: string;
-  packageName: string;
-  newVersion: string;
-  previousVersion?: string;
-  severity: "critical" | "important" | "info";
-  isSecurityUpdate: boolean;
-  isBreakingChange: boolean;
-  changelogSnippet?: string;
-  vulnerabilitiesFixed?: number;
-  read: boolean;
-  createdAt: string;
-}
-
-interface UnreadCount {
-  total: number;
-  critical: number;
-  important: number;
-  info: number;
-}
-
-// =============================================================================
-// API Functions
-// =============================================================================
-
-interface NotificationPreferences {
-  inAppEnabled: boolean;
-}
-
-async function fetchUnreadCount(): Promise<UnreadCount> {
-  if (!API_URL) throw new Error("API URL not configured");
-  const res = await fetch(`${API_URL}/api/notifications/unread-count`, {
-    credentials: "include",
-  });
-  if (!res.ok) throw new Error("Failed to fetch unread count");
-  return res.json();
-}
-
-async function fetchPreferences(): Promise<NotificationPreferences> {
-  if (!API_URL) throw new Error("API URL not configured");
-  const res = await fetch(`${API_URL}/api/notifications/preferences`, {
-    credentials: "include",
-  });
-  if (!res.ok) throw new Error("Failed to fetch preferences");
-  const data = await res.json();
-  return data.preferences;
-}
-
-async function fetchNotifications(limit = 10): Promise<Notification[]> {
-  if (!API_URL) throw new Error("API URL not configured");
-  const res = await fetch(`${API_URL}/api/notifications?limit=${limit}`, {
-    credentials: "include",
-  });
-  if (!res.ok) throw new Error("Failed to fetch notifications");
-  const data = await res.json();
-  return data.notifications;
-}
-
-async function markAsRead(id: string): Promise<void> {
-  if (!API_URL) throw new Error("API URL not configured");
-  const res = await fetch(`${API_URL}/api/notifications/${id}/read`, {
-    method: "PATCH",
-    credentials: "include",
-  });
-  if (!res.ok) throw new Error("Failed to mark as read");
-}
-
-async function markAllAsRead(): Promise<void> {
-  if (!API_URL) throw new Error("API URL not configured");
-  const res = await fetch(`${API_URL}/api/notifications/read-all`, {
-    method: "POST",
-    credentials: "include",
-  });
-  if (!res.ok) throw new Error("Failed to mark all as read");
-}
+import { useSession } from "@/lib/auth-client";
+import { orpc } from "@/lib/orpc/query";
 
 // =============================================================================
 // Components
@@ -122,13 +41,24 @@ function SeverityIcon({ severity }: { severity: string }) {
   );
 }
 
-function NotificationItem({
-  notification,
-  onRead,
-}: {
-  notification: Notification;
+interface NotificationItemProps {
+  notification: {
+    id: string;
+    packageName: string;
+    newVersion: string;
+    previousVersion?: string | null;
+    severity: string;
+    isSecurityUpdate: boolean;
+    isBreakingChange: boolean;
+    changelogSnippet?: string | null;
+    vulnerabilitiesFixed?: number | null;
+    read: boolean;
+    createdAt: string;
+  };
   onRead: () => void;
-}) {
+}
+
+function NotificationItem({ notification, onRead }: NotificationItemProps) {
   const timeAgo = formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true });
 
   return (
@@ -171,43 +101,52 @@ export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
 
   // Fetch preferences to check if bell should be shown
-  const { data: preferences } = useQuery({
-    queryKey: ["notification-preferences"],
-    queryFn: fetchPreferences,
+  const { data: preferencesData } = useQuery({
+    ...orpc.notifications.getPreferences.queryOptions(),
     enabled: !!session?.user,
     staleTime: 60000, // Cache for 1 minute
   });
+  const preferences = preferencesData?.preferences;
 
   // Fetch unread count (poll every 30 seconds)
   const { data: unreadCount } = useQuery({
-    queryKey: ["notifications", "unread-count"],
-    queryFn: fetchUnreadCount,
+    ...orpc.notifications.unreadCount.queryOptions(),
     enabled: !!session?.user && preferences?.inAppEnabled !== false,
     refetchInterval: 30000,
     staleTime: 10000,
   });
 
   // Fetch recent notifications when dropdown opens
-  const { data: notifications, isLoading } = useQuery({
-    queryKey: ["notifications", "recent"],
-    queryFn: () => fetchNotifications(10),
+  const { data: notificationsData, isLoading } = useQuery({
+    ...orpc.notifications.list.queryOptions({ input: { limit: 10 } }),
     enabled: !!session?.user && isOpen,
     staleTime: 10000,
   });
+  const notifications = notificationsData?.notifications;
 
   // Mutation: mark single notification as read
   const markReadMutation = useMutation({
-    mutationFn: markAsRead,
+    ...orpc.notifications.markAsRead.mutationOptions(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({
+        queryKey: orpc.notifications.list.queryOptions({ input: { limit: 10 } }).queryKey,
+      });
+      queryClient.invalidateQueries({
+        queryKey: orpc.notifications.unreadCount.queryOptions().queryKey,
+      });
     },
   });
 
   // Mutation: mark all as read
   const markAllReadMutation = useMutation({
-    mutationFn: markAllAsRead,
+    ...orpc.notifications.markAllAsRead.mutationOptions(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({
+        queryKey: orpc.notifications.list.queryOptions({ input: { limit: 10 } }).queryKey,
+      });
+      queryClient.invalidateQueries({
+        queryKey: orpc.notifications.unreadCount.queryOptions().queryKey,
+      });
     },
   });
 
@@ -274,7 +213,7 @@ export function NotificationBell() {
             <button
               onClick={(e) => {
                 e.preventDefault();
-                markAllReadMutation.mutate();
+                markAllReadMutation.mutate({});
               }}
               className="text-[10px] text-muted hover:text-foreground transition-colors"
             >
@@ -290,19 +229,17 @@ export function NotificationBell() {
         ) : !notifications?.length ? (
           <div className="px-3 py-4 text-center text-xs text-muted">No notifications yet</div>
         ) : (
-          <>
-            {notifications.map((notification) => (
-              <NotificationItem
-                key={notification.id}
-                notification={notification}
-                onRead={() => {
-                  if (!notification.read) {
-                    markReadMutation.mutate(notification.id);
-                  }
-                }}
-              />
-            ))}
-          </>
+          notifications.map((notification) => (
+            <NotificationItem
+              key={notification.id}
+              notification={notification}
+              onRead={() => {
+                if (!notification.read) {
+                  markReadMutation.mutate({ id: notification.id });
+                }
+              }}
+            />
+          ))
         )}
 
         <DropdownMenuSeparator className="bg-border" />

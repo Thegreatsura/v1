@@ -1,10 +1,3 @@
-/**
- * Preview script to test OG image generation for a package
- * Run with: bun run apps/web/app/[name]/og-preview.tsx react
- */
-
-import { ImageResponse } from "next/og";
-
 // Helper to format downloads
 function formatDownloads(count: number): string {
   if (count >= 1000000) {

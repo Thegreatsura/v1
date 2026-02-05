@@ -5,7 +5,7 @@
  * Contains curated replacement mappings from the community.
  */
 
-import { all, nativeReplacements, type ModuleReplacement } from "module-replacements";
+import { all, type ModuleReplacement, nativeReplacements } from "module-replacements";
 
 // In-memory maps for O(1) lookup
 const moduleToReplacement = new Map<string, ModuleReplacement>();

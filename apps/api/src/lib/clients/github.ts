@@ -10,7 +10,7 @@ import { fetchGitHubRepoBasic, parseGitHubUrl } from "@packrun/data/github";
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
 // Re-export types and utilities
-export { type GitHubRepoData, parseGitHubUrl, fetchGitHubReadme } from "@packrun/data/github";
+export { fetchGitHubReadme, type GitHubRepoData, parseGitHubUrl } from "@packrun/data/github";
 
 /**
  * Simplified GitHub data for API responses

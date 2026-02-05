@@ -4,8 +4,8 @@
  * Usage: RESEND_API_KEY=re_xxx bun run test-send.ts your@email.com
  */
 
-import { sendEmail, Digest, type DigestUpdate } from "./src";
 import React from "react";
+import { Digest, type DigestUpdate, sendEmail } from "./src";
 
 const email = process.argv[2];
 

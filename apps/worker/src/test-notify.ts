@@ -6,10 +6,10 @@
  * Usage: bun run src/test-notify.ts ai
  */
 
-import { fetchPackageMetadata, fetchDownloads } from "./clients";
+import { fetchDownloads, fetchPackageMetadata } from "./clients";
 import { fetchVulnerabilities } from "./clients/osv";
-import { enrichPackageUpdate } from "./lib/notification-enrichment";
 import { dispatchNotifications } from "./lib/notification-dispatcher";
+import { enrichPackageUpdate } from "./lib/notification-enrichment";
 import { getPreviousVersion } from "./lib/version-tracker";
 
 const packageName = process.argv[2] || "ai";

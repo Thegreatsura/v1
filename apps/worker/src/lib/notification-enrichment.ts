@@ -8,9 +8,8 @@
  * - Severity classification
  */
 
-import semver from "semver";
 import { fetchVulnerabilities } from "@packrun/data/osv";
-import { fetchGitHubRepoData } from "@packrun/data/github";
+import semver from "semver";
 
 // =============================================================================
 // Types

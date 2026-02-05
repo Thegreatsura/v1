@@ -7,6 +7,7 @@
   },
   "scripts": {
     "lint": "biome check .",
+    "lint:fix": "biome check --write .",
     "generate:component": "turbo gen react-component",
     "check-types": "tsc --noEmit"
   },

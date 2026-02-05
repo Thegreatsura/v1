@@ -4,8 +4,8 @@
  * Matches packrun.dev website design - dark mode, Geist Mono, sharp corners.
  */
 
-import { Section, Text, Link, Button } from "@react-email/components";
-import { Layout, colors } from "../components/layout";
+import { Button, Link, Section, Text } from "@react-email/components";
+import { colors, Layout } from "../components/layout";
 
 export interface CriticalAlertProps {
   packageName: string;

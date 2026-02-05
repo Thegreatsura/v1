@@ -1,39 +1,14 @@
 "use client";
 
-import { useSession, signIn } from "@/lib/auth-client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
+import { signIn, useSession } from "@/lib/auth-client";
+import { orpc } from "@/lib/orpc/query";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 const PENDING_FAVORITE_KEY = "packrun.dev:pending-favorite";
 
 interface FavoriteButtonProps {
   packageName: string;
-}
-
-async function checkFavorite(packageName: string): Promise<boolean> {
-  const res = await fetch(`${API_URL}/api/favorites/check/${encodeURIComponent(packageName)}`, {
-    credentials: "include",
-  });
-  if (!res.ok) return false;
-  const data = await res.json();
-  return data.isFavorite;
-}
-
-async function addFavorite(packageName: string): Promise<void> {
-  const res = await fetch(`${API_URL}/api/favorites/${encodeURIComponent(packageName)}`, {
-    method: "POST",
-    credentials: "include",
-  });
-  if (!res.ok) throw new Error("Failed to add favorite");
-}
-
-async function removeFavorite(packageName: string): Promise<void> {
-  const res = await fetch(`${API_URL}/api/favorites/${encodeURIComponent(packageName)}`, {
-    method: "DELETE",
-    credentials: "include",
-  });
-  if (!res.ok) throw new Error("Failed to remove favorite");
 }
 
 export function FavoriteButton({ packageName }: FavoriteButtonProps) {
@@ -41,45 +16,73 @@ export function FavoriteButton({ packageName }: FavoriteButtonProps) {
   const queryClient = useQueryClient();
 
   // Check if this package is favorited
-  const { data: isFavorite = false } = useQuery({
-    queryKey: ["favorite", packageName],
-    queryFn: () => checkFavorite(packageName),
+  const { data: checkData } = useQuery({
+    ...orpc.favorites.check.queryOptions({ input: { name: packageName } }),
     enabled: !!session?.user,
   });
+  const isFavorite = checkData?.isFavorite ?? false;
 
   // Add favorite mutation
   const addMutation = useMutation({
-    mutationFn: () => addFavorite(packageName),
+    ...orpc.favorites.add.mutationOptions(),
     onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ["favorite", packageName] });
-      const previous = queryClient.getQueryData(["favorite", packageName]);
-      queryClient.setQueryData(["favorite", packageName], true);
+      await queryClient.cancelQueries({
+        queryKey: orpc.favorites.check.queryOptions({ input: { name: packageName } }).queryKey,
+      });
+      const previous = queryClient.getQueryData(
+        orpc.favorites.check.queryOptions({ input: { name: packageName } }).queryKey,
+      );
+      queryClient.setQueryData(
+        orpc.favorites.check.queryOptions({ input: { name: packageName } }).queryKey,
+        { isFavorite: true },
+      );
       return { previous };
     },
     onError: (_err, _vars, context) => {
-      queryClient.setQueryData(["favorite", packageName], context?.previous);
+      queryClient.setQueryData(
+        orpc.favorites.check.queryOptions({ input: { name: packageName } }).queryKey,
+        context?.previous,
+      );
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["favorite", packageName] });
-      queryClient.invalidateQueries({ queryKey: ["favorites"] });
+      queryClient.invalidateQueries({
+        queryKey: orpc.favorites.check.queryOptions({ input: { name: packageName } }).queryKey,
+      });
+      queryClient.invalidateQueries({
+        queryKey: orpc.favorites.list.queryOptions().queryKey,
+      });
     },
   });
 
   // Remove favorite mutation
   const removeMutation = useMutation({
-    mutationFn: () => removeFavorite(packageName),
+    ...orpc.favorites.remove.mutationOptions(),
     onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ["favorite", packageName] });
-      const previous = queryClient.getQueryData(["favorite", packageName]);
-      queryClient.setQueryData(["favorite", packageName], false);
+      await queryClient.cancelQueries({
+        queryKey: orpc.favorites.check.queryOptions({ input: { name: packageName } }).queryKey,
+      });
+      const previous = queryClient.getQueryData(
+        orpc.favorites.check.queryOptions({ input: { name: packageName } }).queryKey,
+      );
+      queryClient.setQueryData(
+        orpc.favorites.check.queryOptions({ input: { name: packageName } }).queryKey,
+        { isFavorite: false },
+      );
       return { previous };
     },
     onError: (_err, _vars, context) => {
-      queryClient.setQueryData(["favorite", packageName], context?.previous);
+      queryClient.setQueryData(
+        orpc.favorites.check.queryOptions({ input: { name: packageName } }).queryKey,
+        context?.previous,
+      );
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["favorite", packageName] });
-      queryClient.invalidateQueries({ queryKey: ["favorites"] });
+      queryClient.invalidateQueries({
+        queryKey: orpc.favorites.check.queryOptions({ input: { name: packageName } }).queryKey,
+      });
+      queryClient.invalidateQueries({
+        queryKey: orpc.favorites.list.queryOptions().queryKey,
+      });
     },
   });
 
@@ -93,7 +96,7 @@ export function FavoriteButton({ packageName }: FavoriteButtonProps) {
 
     if (pendingFavorite === packageName) {
       localStorage.removeItem(PENDING_FAVORITE_KEY);
-      addMutation.mutate();
+      addMutation.mutate({ name: packageName });
     }
   }, [session?.user, packageName, addMutation]);
 
@@ -124,9 +127,9 @@ export function FavoriteButton({ packageName }: FavoriteButtonProps) {
 
   const handleToggle = () => {
     if (isFavorite) {
-      removeMutation.mutate();
+      removeMutation.mutate({ name: packageName });
     } else {
-      addMutation.mutate();
+      addMutation.mutate({ name: packageName });
     }
   };
 

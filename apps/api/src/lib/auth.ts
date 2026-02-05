@@ -5,10 +5,10 @@
  * Uses cookieCache for fast session lookups (no LRU cache needed).
  */
 
-import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@packrun/db/client";
 import * as schema from "@packrun/db/schema";
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
 
 const isProduction = process.env.BETTER_AUTH_URL?.includes("packrun.dev");
 

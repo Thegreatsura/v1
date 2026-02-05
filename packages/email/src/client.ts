@@ -6,8 +6,9 @@
  * - Rate limit handling
  */
 
-import { Resend } from "resend";
+import { createHmac } from "node:crypto";
 import type { ReactElement } from "react";
+import { Resend } from "resend";
 
 // Initialize Resend client (null if no API key)
 const apiKey = process.env.RESEND_API_KEY;
@@ -24,14 +25,13 @@ export interface SendEmailOptions {
  * Generate unsubscribe token using HMAC
  */
 export function generateUnsubscribeToken(userId: string, action: "all" | "digest" = "all"): string {
-  const crypto = require("crypto");
   const secret = process.env.UNSUBSCRIBE_SECRET;
   if (!secret) {
     throw new Error("UNSUBSCRIBE_SECRET not configured");
   }
 
   const payload = `${userId}:${action}:${Date.now()}`;
-  const signature = crypto.createHmac("sha256", secret).update(payload).digest("hex").slice(0, 16);
+  const signature = createHmac("sha256", secret).update(payload).digest("hex").slice(0, 16);
   return Buffer.from(`${payload}:${signature}`).toString("base64url");
 }
 
@@ -39,7 +39,6 @@ export function generateUnsubscribeToken(userId: string, action: "all" | "digest
  * Verify unsubscribe token
  */
 export function verifyUnsubscribeToken(token: string): { userId: string; action: string } | null {
-  const crypto = require("crypto");
   const secret = process.env.UNSUBSCRIBE_SECRET;
   if (!secret) return null;
 
@@ -49,8 +48,7 @@ export function verifyUnsubscribeToken(token: string): { userId: string; action:
     if (parts.length !== 4) return null;
 
     const [userId, action, timestamp, signature] = parts;
-    const expected = crypto
-      .createHmac("sha256", secret)
+    const expected = createHmac("sha256", secret)
       .update(`${userId}:${action}:${timestamp}`)
       .digest("hex")
       .slice(0, 16);

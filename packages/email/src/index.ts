@@ -3,12 +3,12 @@
  */
 
 export {
-  resend,
-  sendEmail,
   generateUnsubscribeToken,
-  verifyUnsubscribeToken,
   RateLimitError,
+  resend,
   type SendEmailOptions,
+  sendEmail,
+  verifyUnsubscribeToken,
 } from "./client";
 
 export { CriticalAlert, type CriticalAlertProps } from "./templates/critical";

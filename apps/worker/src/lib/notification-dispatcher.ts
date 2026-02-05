@@ -2,25 +2,22 @@
  * Notification Dispatcher
  *
  * Creates notifications for users who favorited a package and
- * dispatches to appropriate channels (in-app, Slack, email).
+ * dispatches to appropriate channels (in-app, email).
  */
 
-import { createId } from "@paralleldrive/cuid2";
-import { getQueue } from "@packrun/queue";
-import {
-  SLACK_DELIVERY_QUEUE,
-  EMAIL_DELIVERY_QUEUE,
-  EXTERNAL_API_RETRY,
-  type SlackDeliveryJobData,
-  type EmailDeliveryJobData,
-} from "@packrun/queue/delivery";
 import { db } from "@packrun/db/client";
 import {
   getUsersWithFavoritesForPackage,
   insertNotification,
-  getSlackIntegration,
   type UserWithFavoriteAndPreferences,
 } from "@packrun/db/queries";
+import { getQueue } from "@packrun/queue";
+import {
+  EMAIL_DELIVERY_QUEUE,
+  type EmailDeliveryJobData,
+  EXTERNAL_API_RETRY,
+} from "@packrun/queue/delivery";
+import { createId } from "@paralleldrive/cuid2";
 import type { NotificationEnrichment } from "./notification-enrichment";
 
 // =============================================================================
@@ -67,8 +64,7 @@ function shouldNotifyUser(
  * 1. Find all users who favorited the package
  * 2. Filter by user preferences
  * 3. Create in-app notifications
- * 4. Queue Slack messages
- * 5. Queue immediate emails (critical only)
+ * 4. Queue immediate emails (critical only)
  */
 export async function dispatchNotifications(
   packageName: string,
@@ -118,11 +114,6 @@ export async function dispatchNotifications(
         await createInAppNotification(userPrefs.userId, notificationData);
       }
 
-      // Queue Slack notification (if enabled)
-      if (userPrefs.slackEnabled) {
-        await queueSlackNotification(userPrefs.userId, notificationData);
-      }
-
       // Queue immediate email for critical notifications
       if (userPrefs.emailImmediateCritical && notificationData.severity === "critical") {
         await queueImmediateEmail(userPrefs.userId, userPrefs.email, notificationData);
@@ -167,46 +158,6 @@ async function createInAppNotification(userId: string, data: NotificationData): 
     });
   } catch (error) {
     console.error(`[Dispatcher] Error creating in-app notification:`, error);
-  }
-}
-
-/**
- * Queue Slack notification
- */
-async function queueSlackNotification(userId: string, data: NotificationData): Promise<void> {
-  if (!db) return;
-
-  try {
-    // Find user's Slack integration
-    const integration = await getSlackIntegration(db, userId);
-
-    if (!integration) return;
-
-    const slackQueue = getQueue<SlackDeliveryJobData>({ name: SLACK_DELIVERY_QUEUE });
-
-    await slackQueue.add(
-      "send",
-      {
-        integrationId: integration.id,
-        userId,
-        notification: {
-          packageName: data.packageName,
-          newVersion: data.newVersion,
-          previousVersion: data.previousVersion || undefined,
-          severity: data.severity,
-          isSecurityUpdate: data.isSecurityUpdate,
-          isBreakingChange: data.isBreakingChange,
-          changelogSnippet: data.changelogSnippet || undefined,
-          vulnerabilitiesFixed: data.vulnerabilitiesFixed || undefined,
-        },
-      },
-      {
-        ...EXTERNAL_API_RETRY,
-        jobId: `slack-${userId}-${data.packageName}-${data.newVersion}`,
-      },
-    );
-  } catch (error) {
-    console.error(`[Dispatcher] Error queuing Slack notification:`, error);
   }
 }
 

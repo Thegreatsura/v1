@@ -10,7 +10,10 @@
     "./templates/digest": "./src/templates/digest.tsx"
   },
   "scripts": {
-    "dev": "email dev --dir src/templates --port 3003"
+    "dev": "email dev --dir src/templates --port 3003",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "@react-email/components": "^1.0.7",

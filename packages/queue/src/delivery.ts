@@ -1,7 +1,7 @@
 /**
  * Notification Delivery Queue Configuration
  *
- * Rate-limited queues for external notification delivery (Slack, Email).
+ * Rate-limited queues for external notification delivery (Email).
  * Uses BullMQ's built-in limiter to respect API rate limits.
  */
 
@@ -9,22 +9,12 @@
 // Queue Names
 // ============================================================================
 
-export const SLACK_DELIVERY_QUEUE = "slack-delivery";
 export const EMAIL_DELIVERY_QUEUE = "email-delivery";
 export const EMAIL_DIGEST_QUEUE = "email-digest";
 
 // ============================================================================
 // Rate Limits
 // ============================================================================
-
-/**
- * Slack rate limit: ~1 message per second per workspace
- * Being conservative to avoid hitting limits
- */
-export const SLACK_RATE_LIMIT = {
-  max: 1,
-  duration: 1000, // 1 per second
-};
 
 /**
  * Resend rate limit: Depends on plan
@@ -40,21 +30,6 @@ export const EMAIL_RATE_LIMIT = {
 // ============================================================================
 // Job Data Types
 // ============================================================================
-
-export interface SlackDeliveryJobData {
-  integrationId: string;
-  userId: string;
-  notification: {
-    packageName: string;
-    newVersion: string;
-    previousVersion?: string;
-    severity: "critical" | "important" | "info";
-    isSecurityUpdate: boolean;
-    isBreakingChange: boolean;
-    changelogSnippet?: string;
-    vulnerabilitiesFixed?: number;
-  };
-}
 
 export interface EmailDeliveryJobData {
   to: string;
