@@ -48,8 +48,8 @@
   "devDependencies": {
     "@packrun/typescript-config": "workspace:*",
     "@tailwindcss/postcss": "^4.1.18",
-    "@types/node": "^25.2.0",
-    "@types/react": "^19.2.10",
+    "@types/node": "^25.2.1",
+    "@types/react": "^19.2.13",
     "@types/react-dom": "^19.2.3",
     "@types/three": "^0.182.0",
     "postcss": "^8.5.6",
