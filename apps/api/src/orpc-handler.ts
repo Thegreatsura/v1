@@ -56,6 +56,8 @@ const corsPlugin = new CORSPlugin({
     if (origin.includes("localhost")) return origin;
     if (origin.endsWith(".packrun.dev")) return origin;
     if (origin === "https://packrun.dev") return origin;
+    if (origin.endsWith(".v1.run")) return origin;
+    if (origin === "https://v1.run") return origin;
     return "*";
   },
   allowMethods: ["GET", "HEAD", "PUT", "POST", "DELETE", "PATCH", "OPTIONS"],

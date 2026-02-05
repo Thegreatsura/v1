@@ -34,6 +34,8 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
     allowOrigin = origin;
   } else if (origin?.endsWith(".packrun.dev") || origin === "https://packrun.dev") {
     allowOrigin = origin;
+  } else if (origin?.endsWith(".v1.run") || origin === "https://v1.run") {
+    allowOrigin = origin;
   }
 
   return {
