@@ -10,11 +10,13 @@
     "dev": "bun run --watch src/index.ts",
     "start": "bun run src/index.ts",
     "test": "bun test",
+    "db:migrate": "drizzle-kit migrate --config=../../packages/db/drizzle.config.ts",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "drizzle-kit": "^0.31.8",
     "@hono/mcp": "^0.2.3",
     "@modelcontextprotocol/sdk": "^1.25.3",
     "@orpc/openapi": "^1.13.4",
