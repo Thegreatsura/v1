@@ -9,8 +9,9 @@ import { HealthScoreTooltip, HealthScoreTooltipTrigger } from "@/components/heal
 import { InstallSizeStatCell } from "@/components/install-size-stat";
 import { InstallTabs } from "@/components/install-tabs";
 import { TimeAgo } from "@/components/time-ago";
-import { UpcomingReleasesWidget } from "@/components/upcoming-releases-widget";
+import { UpcomingReleaseAlert } from "@/components/upcoming-release-alert";
 import { WeeklyDownloads } from "@/components/weekly-downloads";
+import { client } from "@/lib/orpc/client";
 import { formatNumber, getPackage } from "@/lib/packages";
 import { getStaticPackages } from "@/lib/popular-packages";
 
@@ -91,6 +92,21 @@ export default async function PackagePage({ params }: PageProps) {
   }
 
   const deps = Object.keys(pkg.dependencies || {});
+
+  // Fetch upcoming releases for this package
+  let upcomingRelease = null;
+  try {
+    const result = await client.releases.list({
+      status: "upcoming",
+      packageName: decodedName,
+      limit: 1,
+    });
+    if (result.releases.length > 0) {
+      upcomingRelease = result.releases[0];
+    }
+  } catch {
+    // Ignore errors fetching releases
+  }
 
   const softwareJsonLd = {
     "@context": "https://schema.org",
@@ -250,6 +266,13 @@ export default async function PackagePage({ params }: PageProps) {
           <div className="flex flex-col lg:flex-row">
             {/* Left: Main Content */}
             <div className="flex-1 min-w-0 lg:border-r border-border">
+              {/* Upcoming Release Alert */}
+              {upcomingRelease && (
+                <section className="border-b border-border py-4 lg:pr-8">
+                  <UpcomingReleaseAlert release={upcomingRelease} />
+                </section>
+              )}
+
               {/* Install Section */}
               <section className="border-b border-border py-6 lg:pr-8">
                 <InstallTabs packageName={pkg.name} hasTypes={pkg.hasTypes} />
@@ -360,11 +383,6 @@ export default async function PackagePage({ params }: PageProps) {
                   <div className="text-xs text-subtle mt-1">{pkg.health.health.status}</div>
                 </div>
               )}
-
-              {/* Upcoming Releases */}
-              <div className="border-b border-border py-4">
-                <UpcomingReleasesWidget packageName={pkg.name} limit={2} title="Upcoming" />
-              </div>
 
               {/* Alternatives */}
               {pkg.health?.alternatives && pkg.health.alternatives.length > 0 && (

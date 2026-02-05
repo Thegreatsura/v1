@@ -30,6 +30,31 @@ import {
 import { createId } from "@paralleldrive/cuid2";
 import { z } from "zod";
 
+// Revalidate ISR pages after release changes
+async function revalidateRelease(packageName: string | null) {
+  const webUrl = process.env.WEB_URL || "http://localhost:3000";
+  const secret = process.env.REVALIDATE_SECRET;
+
+  if (!secret) {
+    console.warn("[releases] REVALIDATE_SECRET not configured, skipping ISR revalidation");
+    return;
+  }
+
+  try {
+    await fetch(`${webUrl}/api/revalidate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "release",
+        packageName,
+        secret,
+      }),
+    });
+  } catch (error) {
+    console.error("[releases] Failed to revalidate ISR:", error);
+  }
+}
+
 // Helper to convert DB record to API response
 function formatRelease(
   release: {
@@ -180,6 +205,9 @@ export const create = protectedProcedure
       submittedById: context.user.id,
     });
 
+    // Revalidate ISR pages
+    revalidateRelease(input.packageName || null);
+
     return {
       release: formatRelease(release, 0),
     };
@@ -220,6 +248,9 @@ export const update = protectedProcedure
       throw new Error("Failed to update release");
     }
 
+    // Revalidate ISR pages
+    revalidateRelease(updated.packageName);
+
     const followerCount = await getReleaseFollowerCount(db!, updated.id);
 
     return {
@@ -251,6 +282,9 @@ export const remove = protectedProcedure
     }
 
     await deleteUpcomingRelease(db!, input.id);
+
+    // Revalidate ISR pages
+    revalidateRelease(existing.packageName);
 
     return { success: true };
   });

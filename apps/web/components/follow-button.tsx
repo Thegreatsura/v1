@@ -2,7 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { signIn, useSession } from "@/lib/auth-client";
+import { useSignInModal } from "@/components/sign-in-modal";
+import { useSession } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc/query";
 
 const PENDING_FOLLOW_KEY = "packrun.dev:pending-follow";
@@ -14,6 +15,7 @@ interface FollowButtonProps {
 export function FollowButton({ packageName }: FollowButtonProps) {
   const { data: session, isPending: sessionPending } = useSession();
   const queryClient = useQueryClient();
+  const { openSignIn } = useSignInModal();
 
   // Check if this package is followed
   const { data: checkData } = useQuery({
@@ -107,11 +109,11 @@ export function FollowButton({ packageName }: FollowButtonProps) {
     return <span className="text-xs px-2 py-1 border border-border text-faint">Follow</span>;
   }
 
-  // Not logged in - show button that prompts sign in
+  // Not logged in - show button that opens sign in modal
   if (!session?.user) {
     const handleSignIn = () => {
       localStorage.setItem(PENDING_FOLLOW_KEY, packageName);
-      signIn.social({ provider: "github", callbackURL: window.location.href });
+      openSignIn(`follow:${packageName}`);
     };
 
     return (

@@ -74,10 +74,10 @@ const POPULAR_PACKAGES = [
     hasTypes: true,
   },
   {
-    name: "vite",
-    description: "Next Generation Frontend Tooling",
-    version: "5.0.12",
-    downloads: 14000000,
+    name: "resend",
+    description: "The best API to reach humans instead of spam folders",
+    version: "4.0.0",
+    downloads: 500000,
     hasTypes: true,
   },
 ];
