@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useSignInModal } from "@/components/sign-in-modal";
+import { Spinner } from "@/components/ui/spinner";
 import { useSession } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc/query";
 
@@ -104,9 +105,13 @@ export function FollowButton({ packageName }: FollowButtonProps) {
 
   const isPending = followMutation.isPending || unfollowMutation.isPending;
 
-  // Show loading state while session loads
+  // Show loading state while session loads - use button with same dimensions to prevent layout shift
   if (sessionPending) {
-    return <span className="text-xs px-2 py-1 border border-border text-faint">Follow</span>;
+    return (
+      <button disabled className="text-xs px-2 py-1 border border-border text-faint cursor-default">
+        Follow
+      </button>
+    );
   }
 
   // Not logged in - show button that opens sign in modal
@@ -119,7 +124,7 @@ export function FollowButton({ packageName }: FollowButtonProps) {
     return (
       <button
         onClick={handleSignIn}
-        className="text-xs px-2 py-1 border border-border text-subtle hover:text-foreground hover:border-foreground transition-colors"
+        className="text-xs px-2 py-1 border border-border text-subtle hover:text-muted transition-colors"
         title="Sign in to follow and get notified about updates"
       >
         Follow
@@ -139,14 +144,13 @@ export function FollowButton({ packageName }: FollowButtonProps) {
     <button
       onClick={handleToggle}
       disabled={isPending}
-      className={`text-xs px-2 py-1 border transition-colors ${
-        isFollowing
-          ? "border-foreground bg-foreground text-background hover:bg-transparent hover:text-foreground"
-          : "border-border text-subtle hover:text-foreground hover:border-foreground"
-      }`}
+      className="text-xs px-2 py-1 border border-border text-subtle hover:text-muted transition-colors"
       title={isFollowing ? "Unfollow" : "Follow to get notified about updates"}
     >
-      {isFollowing ? "Following" : "Follow"}
+      <span className="inline-flex items-center gap-1">
+        {isPending ? <Spinner className="text-[10px]" /> : isFollowing ? "✓" : null}
+        <span>{isFollowing ? "Following" : "Follow"}</span>
+      </span>
     </button>
   );
 }

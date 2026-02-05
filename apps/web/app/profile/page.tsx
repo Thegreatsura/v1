@@ -143,8 +143,8 @@ function NotificationPreferencesSection() {
             />
           </div>
           {preferences?.emailDigestEnabled && (
-            <div className="ml-4 flex items-center gap-2">
-              <span className="text-xs text-muted">Frequency:</span>
+            <div className="ml-4 flex items-center justify-between">
+              <span className="text-sm">Frequency</span>
               <select
                 value={preferences.emailDigestFrequency || "daily"}
                 onChange={(e) =>
@@ -152,7 +152,7 @@ function NotificationPreferencesSection() {
                     emailDigestFrequency: e.target.value as "daily" | "weekly",
                   })
                 }
-                className="bg-transparent border border-border px-2 py-1 text-xs focus:outline-none focus:border-foreground"
+                className="bg-background border border-border px-2 py-1 text-xs focus:outline-none focus:border-foreground cursor-pointer"
               >
                 <option value="daily">Daily</option>
                 <option value="weekly">Weekly</option>

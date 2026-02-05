@@ -64,7 +64,10 @@ export function UpcomingReleaseAlert({ release }: UpcomingReleaseAlertProps) {
   return (
     <div className="border border-border bg-surface p-4 flex items-center justify-between gap-4">
       <div className="flex items-center gap-3 min-w-0">
-        <span className="text-xs uppercase tracking-wider text-foreground shrink-0">upcoming</span>
+        <span className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-foreground shrink-0">
+          <span className="text-[#ff6700]">▪</span>
+          upcoming
+        </span>
         <Link
           href="/releases/upcoming"
           className="text-sm text-muted hover:text-foreground transition-colors truncate"

@@ -100,18 +100,10 @@ export function NotificationBell() {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Fetch preferences to check if bell should be shown
-  const { data: preferencesData } = useQuery({
-    ...orpc.notifications.getPreferences.queryOptions(),
-    enabled: !!session?.user,
-    staleTime: 60000, // Cache for 1 minute
-  });
-  const preferences = preferencesData?.preferences;
-
   // Fetch unread count (poll every 30 seconds)
   const { data: unreadCount } = useQuery({
     ...orpc.notifications.unreadCount.queryOptions(),
-    enabled: !!session?.user && preferences?.inAppEnabled !== false,
+    enabled: !!session?.user,
     refetchInterval: 30000,
     staleTime: 10000,
   });
@@ -157,11 +149,6 @@ export function NotificationBell() {
 
   // Don't render if not logged in
   if (!session?.user) {
-    return null;
-  }
-
-  // Don't render if user has disabled in-app notifications
-  if (preferences?.inAppEnabled === false) {
     return null;
   }
 

@@ -160,15 +160,15 @@ export default async function PackagePage({ params }: PageProps) {
           <div className="container-page py-6">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="text-2xl lg:text-3xl font-bold text-foreground tracking-tight">
-                    {pkg.name}
-                  </h1>
-                  <FollowButton packageName={pkg.name} />
-                </div>
+                <h1 className="text-2xl lg:text-3xl font-bold text-foreground tracking-tight">
+                  {pkg.name}
+                </h1>
                 {pkg.description && (
                   <p className="mt-2 text-sm text-muted max-w-2xl">{pkg.description}</p>
                 )}
+                <div className="mt-3">
+                  <FollowButton packageName={pkg.name} />
+                </div>
               </div>
               <div className="text-right">
                 <div className="text-xs text-subtle uppercase tracking-wider">version</div>
