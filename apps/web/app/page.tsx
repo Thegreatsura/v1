@@ -1,6 +1,7 @@
 import { Footer } from "@/components/footer";
 import { HomeNav } from "@/components/home-nav";
 import { HomeSearch } from "@/components/home-search";
+import { LiveFeedWrapper } from "@/components/live-feed-wrapper";
 import { NotificationBell } from "@/components/notification-bell";
 import { UpcomingReleasesWidget } from "@/components/upcoming-releases-widget";
 import { UserProfile } from "@/components/user-profile";
@@ -11,6 +12,9 @@ export const revalidate = 3600;
 export default function Home() {
   return (
     <div className="min-h-screen bg-background text-foreground font-mono relative">
+      {/* Three.js particle background + CRT dirt overlays */}
+      <LiveFeedWrapper />
+
       {/* Screen flicker */}
       <div className="screen-flicker" />
 
